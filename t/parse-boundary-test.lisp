@@ -58,4 +58,24 @@
        "#.(progn (setf cl-cc-parse/test::*parse-boundary-probe* t) 42)"
        "trusted-source.lisp"
        :allow-read-eval t))
-    (expect cl-cc-parse/test::*parse-boundary-probe* :to-be t)))
+    (expect cl-cc-parse/test::*parse-boundary-probe* :to-be t))
+
+  (it "allows stdlib host constants only through explicit parser opt-in"
+    (let ((source
+            (concatenate 'string
+                         "(defconstant most-positive-fixnum #.(1- (expt 2 62))) "
+                         "(defconstant most-negative-fixnum #.(- (expt 2 62)))"))
+          (blocked nil))
+      (let ((*read-eval* t))
+        (handler-case
+            (cl-cc/parse:parse-all-forms source)
+          (error ()
+            (setf blocked t))))
+      (expect blocked :to-be-truthy)
+      (let ((forms
+              (cl-cc/parse:parse-all-forms
+               source
+               :allow-read-eval t)))
+        (expect (length forms) :to-be 2)
+        (expect (third (first forms)) :to-be (1- (expt 2 62)))
+        (expect (third (second forms)) :to-be (- (expt 2 62)))))))
