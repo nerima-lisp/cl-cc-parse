@@ -8,6 +8,8 @@
 
 (in-package :cl-cc-parse/test)
 
+(defvar *parse-boundary-probe* nil)
+
 (describe-sequential "cl-cc-parse dependency closure"
   (it "has its two declared dependencies present"
     (dolist (name '("CL-CC/AST" "CL-CC/BOOTSTRAP"))
@@ -36,3 +38,24 @@
     ;; the difference is invisible until something tries to walk the bindings.
     (let ((ast (cl-cc/parse:lower-sexp-to-ast '(let ((x 1)) x))))
       (expect (typep ast 'cl-cc/ast:ast-let) :to-be-truthy))))
+(describe-sequential "parser read-time evaluation boundary"
+  (it "ignores an ambient *read-eval* binding by default"
+    (setf cl-cc-parse/test::*parse-boundary-probe* nil)
+    (let ((signaled nil)
+          (*read-eval* t))
+      (handler-case
+          (cl-cc/parse:parse-cl-source
+           "#.(progn (setf cl-cc-parse/test::*parse-boundary-probe* t) 42)")
+        (error ()
+          (setf signaled t)))
+      (expect signaled :to-be-truthy)
+      (expect cl-cc-parse/test::*parse-boundary-probe* :to-be nil)))
+
+  (it "requires an explicit opt-in for host read-time evaluation"
+    (setf cl-cc-parse/test::*parse-boundary-probe* nil)
+    (let ((*read-eval* nil))
+      (cl-cc/parse:parse-cl-source
+       "#.(progn (setf cl-cc-parse/test::*parse-boundary-probe* t) 42)"
+       "trusted-source.lisp"
+       :allow-read-eval t))
+    (expect cl-cc-parse/test::*parse-boundary-probe* :to-be t)))
