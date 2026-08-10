@@ -245,10 +245,12 @@
   "Create a new lexer state for SOURCE string."
   (make-lexer-state :source source))
 
-(defun lex-all (source)
+(defun lex-all (source &key (allow-read-eval nil))
   "Tokenize SOURCE string completely, returning a list of lexer-token structs.
-   The last token has type :T-EOF."
-  (let ((*lexer-label-table* (make-hash-table :test #'eql))
+   The last token has type :T-EOF. ALLOW-READ-EVAL is NIL by default; set it
+   only for trusted source that deliberately uses #. host constants."
+  (let ((*read-eval* allow-read-eval)
+        (*lexer-label-table* (make-hash-table :test #'eql))
         (state (make-lexer source))
         (tokens nil))
     (loop

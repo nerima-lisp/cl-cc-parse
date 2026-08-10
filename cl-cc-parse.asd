@@ -14,6 +14,7 @@
   :source-control (:git "https://github.com/nerima-lisp/cl-cc-parse.git")
   :version "0.1.0"
   :depends-on (:cl-cc-ast :cl-cc-bootstrap)
+  :in-order-to ((test-op (test-op "cl-cc-parse/test")))
   :pathname "src"
   :serial t
   :components
@@ -54,4 +55,7 @@
                (:file "parse-boundary-test"))
   :perform (asdf:test-op (op system)
              (declare (ignore op system))
-             (uiop:symbol-call :cl-weave :run-all-tests :pass-with-no-tests nil)))
+             (unless (uiop:symbol-call :cl-weave :run-all
+                                       :reporter :spec
+                                       :pass-with-no-tests nil)
+               (error "cl-cc-parse tests failed"))))
