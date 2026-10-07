@@ -12,7 +12,7 @@
   :homepage "https://github.com/nerima-lisp/cl-cc-parse"
   :bug-tracker "https://github.com/nerima-lisp/cl-cc-parse/issues"
   :source-control (:git "https://github.com/nerima-lisp/cl-cc-parse.git")
-  :version "0.1.0"
+  :version "0.1.1"
   :depends-on (:cl-cc-ast :cl-cc-bootstrap)
   :in-order-to ((test-op (test-op "cl-cc-parse/test")))
   :pathname "src"
