@@ -126,6 +126,23 @@
                 touch "$out/passed"
               '';
 
+          orphan-tests =
+            pkgs.runCommand "cl-cc-parse-orphan-tests"
+              {
+                nativeBuildInputs = [
+                  pkgs.sbcl
+                  pkgs.coreutils
+                ];
+              }
+              ''
+                set -euo pipefail
+                export HOME="$TMPDIR/home"
+                mkdir -p "$HOME"
+                timeout 120 sbcl --noinform --eval '(require :asdf)' \
+                  --script ${self}/check-orphan-tests.lisp ${self}
+                touch "$out"
+              '';
+
           # Fails `nix flake check` when any tracked file is unformatted,
           # turning the formatter into an enforced CI gate.
           formatting = treefmtEval.${system}.config.build.check self;
