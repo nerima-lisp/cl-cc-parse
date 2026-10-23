@@ -79,3 +79,6 @@
         (expect (length forms) :to-be 2)
         (expect (third (first forms)) :to-be (1- (expt 2 62)))
         (expect (third (second forms)) :to-be (- (expt 2 62)))))))
+(describe-sequential "failure propagation control"
+  (it "fails when a test assertion is false"
+    (expect nil :to-be-truthy)))
