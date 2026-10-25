@@ -118,9 +118,14 @@ Does not include #\\ (character literals), which need special advance logic.")
                 (unless (lex-at-end-p state) (lex-advance state))
                 (return (nreverse parts)))
               (push (lex-read-feature-expr state) parts))))
-        ;; Simple feature keyword
-        (let ((name (lex-read-symbol-name state)))
-          (intern (string-upcase name) :keyword)))))
+        ;; Simple feature name, optionally prefixed with a colon
+        (let ((start (lexer-state-pos state)))
+          (when (char= ch #\:)
+            (lex-advance state))
+          (let ((name (lex-read-symbol-name state)))
+            (when (string= name "")
+              (error "Lexer error: expected feature name at byte ~D" start))
+            (intern (string-upcase name) :keyword))))))
 
 (defun lex-feature-present-p (feature)
   "Evaluate a feature expression against *features*."

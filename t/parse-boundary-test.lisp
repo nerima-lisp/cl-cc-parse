@@ -79,3 +79,15 @@
         (expect (length forms) :to-be 2)
         (expect (third (first forms)) :to-be (1- (expt 2 62)))
         (expect (third (second forms)) :to-be (- (expt 2 62)))))))
+(describe-sequential "parser feature expressions"
+  (it "parses keyword names in compound feature expressions"
+    (expect (equal (cl-cc/parse:parse-all-forms
+                    "#+(or (not :gcl) :gcl) 42")
+                   (quote (42)))
+            :to-be t))
+  (it "rejects empty feature names"
+    (let ((rejected nil))
+      (handler-case
+          (cl-cc/parse:parse-all-forms "#+(or :) 42")
+        (error () (setf rejected t)))
+      (expect rejected :to-be t))))
