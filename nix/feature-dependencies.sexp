@@ -1,0 +1,42 @@
+((:feature "cst"
+  :source-dirs ("src/cst")
+  :test-dir "t/cst"
+  :facade-packages ("cl-cc/parse")
+  :domain-package "cl-cc/parse/cst"
+  :infra-package nil
+  :depends-on ())
+ (:feature "diagnostics"
+  :source-dirs ("src/diagnostics")
+  :test-dir "t/diagnostics"
+  :facade-packages ("cl-cc/parse")
+  :domain-package "cl-cc/parse/diagnostics"
+  :infra-package nil
+  :depends-on ())
+ (:feature "reader"
+  :source-dirs ("src/reader")
+  :test-dir "t/reader"
+  :facade-packages ("cl-cc/parse")
+  :domain-package "cl-cc/parse/reader"
+  :infra-package nil
+  :depends-on ("cst"))
+ (:feature "incremental"
+  :source-dirs ("src/incremental")
+  :test-dir "t/incremental"
+  :facade-packages ("cl-cc/parse")
+  :domain-package "cl-cc/parse/incremental"
+  :infra-package nil
+  :depends-on ("cst"))
+ (:feature "grammar"
+  :source-dirs ("src/grammar")
+  :test-dir "t/grammar"
+  :facade-packages ("cl-cc/parse")
+  :domain-package "cl-cc/parse/grammar"
+  :infra-package nil
+  :depends-on ("reader" "cst" "diagnostics"))
+ (:feature "lowering"
+  :source-dirs ("src/lowering")
+  :test-dir "t/lowering"
+  :facade-packages ("cl-cc/parse")
+  :domain-package "cl-cc/parse/lowering"
+  :infra-package nil
+  :depends-on ("cst" "diagnostics" "grammar")))
