@@ -46,8 +46,7 @@
     let
       lib = nixpkgs.lib;
       systems = [ "x86_64-linux" ];
-      sourceRegistry =
-        "${cl-weave}//:${cl-cc-ast}//:${cl-cc-bootstrap}//:${cl-parser-kit}//:${self}//";
+      sourceRegistry = "${cl-weave}//:${cl-cc-ast}//:${cl-cc-bootstrap}//:${cl-parser-kit}//:${self}//";
     in
     cl-nix-forge.lib.${builtins.head systems}.mkPackageFlake {
       inherit self nixpkgs systems;
@@ -70,26 +69,33 @@
       killAfterSeconds = 15;
       treefmt.evalModule = treefmt-nix.lib.evalModule;
 
-      extraOutputs =
-        ctx: {
-          checks.feature-lint = ctx.cl.mkFeatureLintCheck {
-            src = ./.;
-            featureDefinitions = "nix/feature-dependencies.sexp";
-            glossary = "docs/src/reference/glossary.md";
-            glossaryHeadingPrefix = "## ";
-            exportSurface = "t/export-surface.txt";
-            mode = "transition";
-            legacyInternalRefs = "t/legacy-internal-refs.sexp";
-            forbiddenNames = [ "phases" "misc" "utils" "helpers" ];
-            numberedPrefixes = [ "FR-" "W" ];
-            packagePrefix = "cl-cc/parse/";
-            infraSuffix = "/infra";
-          };
-          checks.orphan-tests = ctx.cl.mkOrphanTestCheck {
-            src = ./.;
-            testRoots = [ "t" ];
-            testSystems = [ "cl-cc-parse/test" ];
-          };
+      extraOutputs = ctx: {
+        checks.feature-lint = ctx.cl.mkFeatureLintCheck {
+          src = ./.;
+          featureDefinitions = "nix/feature-dependencies.sexp";
+          glossary = "docs/src/reference/glossary.md";
+          glossaryHeadingPrefix = "## ";
+          exportSurface = "t/export-surface.txt";
+          mode = "transition";
+          legacyInternalRefs = "t/legacy-internal-refs.sexp";
+          forbiddenNames = [
+            "phases"
+            "misc"
+            "utils"
+            "helpers"
+          ];
+          numberedPrefixes = [
+            "FR-"
+            "W"
+          ];
+          packagePrefix = "cl-cc/parse/";
+          infraSuffix = "/infra";
         };
+        checks.orphan-tests = ctx.cl.mkOrphanTestCheck {
+          src = ./.;
+          testRoots = [ "t" ];
+          testSystems = [ "cl-cc-parse/test" ];
+        };
+      };
     };
 }
