@@ -46,7 +46,6 @@
     let
       lib = nixpkgs.lib;
       systems = [ "x86_64-linux" ];
-      sourceRegistry = "${cl-weave}//:${cl-cc-ast}//:${cl-cc-bootstrap}//:${cl-parser-kit}//:${self}//";
     in
     cl-nix-forge.lib.${builtins.head systems}.mkPackageFlake {
       inherit self nixpkgs systems;
@@ -62,9 +61,28 @@
         platforms = lib.platforms.unix;
       };
 
-      packageArgs = _: {
-        CL_SOURCE_REGISTRY = sourceRegistry;
-      };
+      # Built derivations provide FASLs; raw input paths cannot accept writes.
+      lispDependencies = ctx: [
+        (ctx.cl.lispDerivation {
+          lispSystem = "cl-cc-ast";
+          version = ctx.cl.fromAsdSystem "${cl-cc-ast}/cl-cc-ast.asd";
+          src = cl-cc-ast;
+          lispDependencies = [ ];
+        })
+        (ctx.cl.lispDerivation {
+          lispSystem = "cl-cc-bootstrap";
+          version = ctx.cl.fromAsdSystem "${cl-cc-bootstrap}/cl-cc-bootstrap.asd";
+          src = cl-cc-bootstrap;
+          lispDependencies = [ ];
+        })
+        (ctx.cl.lispDerivation {
+          lispSystem = "cl-parser-kit";
+          version = ctx.cl.fromAsdSystem "${cl-parser-kit}/cl-parser-kit.asd";
+          src = cl-parser-kit;
+          lispDependencies = [ ];
+        })
+      ];
+      lispCheckDependencies = ctx: [ cl-weave.packages.${ctx.system}.cl-weave ];
       timeoutSeconds = 120;
       killAfterSeconds = 15;
       treefmt.evalModule = treefmt-nix.lib.evalModule;
