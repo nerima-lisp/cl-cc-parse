@@ -84,4 +84,10 @@
     (expect (equal (cl-cc/parse:parse-all-forms
                     "#+(or (not :gcl) :gcl) 42")
                    (quote (42)))
-            :to-be t)))
+            :to-be t))
+  (it "rejects empty feature names"
+    (let ((rejected nil))
+      (handler-case
+          (cl-cc/parse:parse-all-forms "#+(or :) 42")
+        (error () (setf rejected t)))
+      (expect rejected :to-be t))))
