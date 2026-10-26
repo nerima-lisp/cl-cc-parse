@@ -30,9 +30,9 @@
 
 (it-sequential "incr-edit-operation-accessors"
   (let ((e (make-test-edit 10 20 25)))
-    (expect (cl-cc/parse::edit-operation-start-byte e) :to-equal 10)
-    (expect (cl-cc/parse::edit-operation-old-end-byte e) :to-equal 20)
-    (expect (cl-cc/parse::edit-operation-new-end-byte e) :to-equal 25)))
+    (expect (cl-cc/parse/incremental::edit-operation-start-byte e) :to-equal 10)
+    (expect (cl-cc/parse/incremental::edit-operation-old-end-byte e) :to-equal 20)
+    (expect (cl-cc/parse/incremental::edit-operation-new-end-byte e) :to-equal 25)))
 
 ;;; ─── Geometric Predicates ──────────────────────────────────────────────────
 
@@ -40,40 +40,40 @@
   (destructuring-bind (node-start node-end expected) (list 5 15 t)
     (let ((node (make-test-cst-token :T-INT 1 node-start node-end))
          (edit (make-test-edit 10 20 25)))
-     (expect (cl-cc/parse::cst-overlaps-edit-p node edit) :to-equal expected))))
+     (expect (cl-cc/parse/incremental::cst-overlaps-edit-p node edit) :to-equal expected))))
 
 (it-sequential "incr-overlaps-edit-cases non-overlap-1"
   (destructuring-bind (node-start node-end expected) (list 0 5 nil)
     (let ((node (make-test-cst-token :T-INT 1 node-start node-end))
          (edit (make-test-edit 10 20 25)))
-     (expect (cl-cc/parse::cst-overlaps-edit-p node edit) :to-equal expected))))
+     (expect (cl-cc/parse/incremental::cst-overlaps-edit-p node edit) :to-equal expected))))
 
 (it-sequential "incr-overlaps-edit-cases non-overlap-2"
   (destructuring-bind (node-start node-end expected) (list 25 30 nil)
     (let ((node (make-test-cst-token :T-INT 1 node-start node-end))
          (edit (make-test-edit 10 20 25)))
-     (expect (cl-cc/parse::cst-overlaps-edit-p node edit) :to-equal expected))))
+     (expect (cl-cc/parse/incremental::cst-overlaps-edit-p node edit) :to-equal expected))))
 
 (it-sequential "incr-before-after-edit-cases before-true"
-  (destructuring-bind (predicate node-start node-end expected) (list #'cl-cc/parse::cst-before-edit-p 0 10 t)
+  (destructuring-bind (predicate node-start node-end expected) (list #'cl-cc/parse/incremental::cst-before-edit-p 0 10 t)
     (let ((node (make-test-cst-token :T-INT 1 node-start node-end))
          (edit (make-test-edit 10 20 25)))
      (expect (funcall predicate node edit) :to-equal expected))))
 
 (it-sequential "incr-before-after-edit-cases before-false"
-  (destructuring-bind (predicate node-start node-end expected) (list #'cl-cc/parse::cst-before-edit-p 0 15 nil)
+  (destructuring-bind (predicate node-start node-end expected) (list #'cl-cc/parse/incremental::cst-before-edit-p 0 15 nil)
     (let ((node (make-test-cst-token :T-INT 1 node-start node-end))
          (edit (make-test-edit 10 20 25)))
      (expect (funcall predicate node edit) :to-equal expected))))
 
 (it-sequential "incr-before-after-edit-cases after-true"
-  (destructuring-bind (predicate node-start node-end expected) (list #'cl-cc/parse::cst-after-edit-p 20 30 t)
+  (destructuring-bind (predicate node-start node-end expected) (list #'cl-cc/parse/incremental::cst-after-edit-p 20 30 t)
     (let ((node (make-test-cst-token :T-INT 1 node-start node-end))
          (edit (make-test-edit 10 20 25)))
      (expect (funcall predicate node edit) :to-equal expected))))
 
 (it-sequential "incr-before-after-edit-cases after-false"
-  (destructuring-bind (predicate node-start node-end expected) (list #'cl-cc/parse::cst-after-edit-p 15 25 nil)
+  (destructuring-bind (predicate node-start node-end expected) (list #'cl-cc/parse/incremental::cst-after-edit-p 15 25 nil)
     (let ((node (make-test-cst-token :T-INT 1 node-start node-end))
          (edit (make-test-edit 10 20 25)))
      (expect (funcall predicate node edit) :to-equal expected))))
@@ -82,34 +82,34 @@
   (destructuring-bind (node-start node-end expected) (list 0 5 t)
     (let ((node (make-test-cst-token :T-INT 1 node-start node-end))
          (edit (make-test-edit 10 20 25)))
-     (expect (cl-cc/parse::cst-reuse-p node edit) :to-equal expected))))
+     (expect (cl-cc/parse/incremental::cst-reuse-p node edit) :to-equal expected))))
 
 (it-sequential "incr-reuse-p-cases reuse-false"
   (destructuring-bind (node-start node-end expected) (list 5 15 nil)
     (let ((node (make-test-cst-token :T-INT 1 node-start node-end))
          (edit (make-test-edit 10 20 25)))
-     (expect (cl-cc/parse::cst-reuse-p node edit) :to-equal expected))))
+     (expect (cl-cc/parse/incremental::cst-reuse-p node edit) :to-equal expected))))
 
 ;;; ─── Byte Shifting ──────────────────────────────────────────────────────────
 
 (it-sequential "incr-edit-byte-delta-cases insertion"
   (destructuring-bind (old-end new-end expected) (list 10 15 5)
     (let ((edit (make-test-edit 10 old-end new-end)))
-     (expect (cl-cc/parse::edit-byte-delta edit) :to-equal expected))))
+     (expect (cl-cc/parse/incremental::edit-byte-delta edit) :to-equal expected))))
 
 (it-sequential "incr-edit-byte-delta-cases deletion"
   (destructuring-bind (old-end new-end expected) (list 20 15 -5)
     (let ((edit (make-test-edit 10 old-end new-end)))
-     (expect (cl-cc/parse::edit-byte-delta edit) :to-equal expected))))
+     (expect (cl-cc/parse/incremental::edit-byte-delta edit) :to-equal expected))))
 
 (it-sequential "incr-edit-byte-delta-cases replacement"
   (destructuring-bind (old-end new-end expected) (list 20 20 0)
     (let ((edit (make-test-edit 10 old-end new-end)))
-     (expect (cl-cc/parse::edit-byte-delta edit) :to-equal expected))))
+     (expect (cl-cc/parse/incremental::edit-byte-delta edit) :to-equal expected))))
 
 (it-sequential "incr-shift-bytes-token"
   (let* ((tok (make-test-cst-token :T-INT 42 10 15))
-         (shifted (cl-cc/parse::cst-shift-bytes tok 5)))
+         (shifted (cl-cc/parse/incremental::cst-shift-bytes tok 5)))
     (expect (cl-cc/parse:cst-token-p shifted) :to-be-truthy)
     (expect (cl-cc/parse:cst-node-start-byte shifted) :to-equal 15)
     (expect (cl-cc/parse:cst-node-end-byte shifted) :to-equal 20)
@@ -118,7 +118,7 @@
 (it-sequential "incr-shift-bytes-interior"
   (let* ((child (make-test-cst-token :T-INT 1 5 10))
          (parent (make-test-interior :list 0 20 (list child)))
-         (shifted (cl-cc/parse::cst-shift-bytes parent 10)))
+         (shifted (cl-cc/parse/incremental::cst-shift-bytes parent 10)))
     (expect (cl-cc/parse:cst-interior-p shifted) :to-be-truthy)
     (expect (cl-cc/parse:cst-node-start-byte shifted) :to-equal 10)
     (expect (cl-cc/parse:cst-node-end-byte shifted) :to-equal 30)
@@ -129,14 +129,14 @@
 (it-sequential "incr-shift-bytes-error-node"
   (let* ((err (cl-cc/parse:make-cst-error :kind :error :start-byte 10 :end-byte 20
                                            :message "bad token"))
-         (shifted (cl-cc/parse::cst-shift-bytes err 5)))
+         (shifted (cl-cc/parse/incremental::cst-shift-bytes err 5)))
     (expect (cl-cc/parse:cst-error-p shifted) :to-be-truthy)
     (expect (cl-cc/parse:cst-node-start-byte shifted) :to-equal 15)
     (expect (cl-cc/parse:cst-node-end-byte shifted) :to-equal 25)))
 
 (it-sequential "incr-shift-bytes-negative-delta"
   (let* ((tok (make-test-cst-token :T-INT 1 20 30))
-         (shifted (cl-cc/parse::cst-shift-bytes tok -5)))
+         (shifted (cl-cc/parse/incremental::cst-shift-bytes tok -5)))
     (expect (cl-cc/parse:cst-node-start-byte shifted) :to-equal 15)
     (expect (cl-cc/parse:cst-node-end-byte shifted) :to-equal 25)))
 
@@ -145,7 +145,7 @@
 (it-sequential "incr-find-minimal-reparse-leaf"
   (let ((leaf (make-test-cst-token :T-INT 1 0 10))
         (edit (make-test-edit 0 5 5)))
-    (expect (cl-cc/parse::find-minimal-reparse-node leaf edit) :to-be leaf)))
+    (expect (cl-cc/parse/incremental::find-minimal-reparse-node leaf edit) :to-be leaf)))
 
 (it-sequential "incr-find-minimal-reparse-single-child"
   (let* ((child1 (make-test-cst-token :T-INT 1 0 5))
@@ -156,7 +156,7 @@
          (root (make-test-interior :root 0 20 (list child1 child2 child3)))
          (edit (make-test-edit 7 12 12)))
     ;; Edit overlaps only child2 → should recurse into it
-    (let ((result (cl-cc/parse::find-minimal-reparse-node root edit)))
+    (let ((result (cl-cc/parse/incremental::find-minimal-reparse-node root edit)))
       (expect result :to-be child2))))
 
 (it-sequential "incr-find-minimal-reparse-multiple-children"
@@ -167,7 +167,7 @@
          (root (make-test-interior :root 0 20 (list child1 child2)))
          (edit (make-test-edit 5 15 15)))
     ;; Edit spans both children → root is the minimal node
-    (expect (cl-cc/parse::find-minimal-reparse-node root edit) :to-be root)))
+    (expect (cl-cc/parse/incremental::find-minimal-reparse-node root edit) :to-be root)))
 
 ;;; ─── Rebuild Tree ──────────────────────────────────────────────────────────
 
@@ -177,7 +177,7 @@
          (after (make-test-cst-token :T-INT 3 15 20))
          (edit (make-test-edit 5 15 20))  ; insert 5 bytes
          (new-nodes (list (make-test-cst-token :T-INT 99 5 20)))
-         (result (cl-cc/parse::rebuild-tree (list before overlap after) edit 5 new-nodes)))
+         (result (cl-cc/parse/incremental::rebuild-tree (list before overlap after) edit 5 new-nodes)))
     ;; before + new + shifted-after
     (expect (length result) :to-equal 3)
     ;; First: before node unchanged
@@ -191,13 +191,13 @@
 ;;; ─── Parse Cache ───────────────────────────────────────────────────────────
 
 (it-sequential "incr-cache-operations"
-  (let ((cl-cc/parse::*parse-cache* (make-hash-table :test 'equal)))
+  (let ((cl-cc/parse/incremental::*parse-cache* (make-hash-table :test 'equal)))
     (let ((nodes (list (make-test-cst-token :T-INT 42 0 2))))
       (cl-cc/parse:cache-store "42" nodes)
       (expect (cl-cc/parse:cache-lookup "42") :to-equal nodes)))
-  (let ((cl-cc/parse::*parse-cache* (make-hash-table :test 'equal)))
+  (let ((cl-cc/parse/incremental::*parse-cache* (make-hash-table :test 'equal)))
     (expect (cl-cc/parse:cache-lookup "unknown") :to-be-null))
-  (let ((cl-cc/parse::*parse-cache* (make-hash-table :test 'equal)))
+  (let ((cl-cc/parse/incremental::*parse-cache* (make-hash-table :test 'equal)))
     (cl-cc/parse:cache-store "a" '(1))
     (cl-cc/parse:cache-store "b" '(2))
     (cl-cc/parse:invalidate-parse-cache)

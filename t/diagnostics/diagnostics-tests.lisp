@@ -73,8 +73,8 @@
   (let ((d (cl-cc/parse:make-diagnostic)))
     (expect (cl-cc/parse:diagnostic-severity d) :to-be :error)
     (expect (cl-cc/parse:diagnostic-message d) :to-equal "")
-    (expect (cl-cc/parse::diagnostic-hints d) :to-be-null)
-    (expect (cl-cc/parse::diagnostic-notes d) :to-be-null))
+    (expect (cl-cc/parse/diagnostics::diagnostic-hints d) :to-be-null)
+    (expect (cl-cc/parse/diagnostics::diagnostic-notes d) :to-be-null))
   (let ((d (cl-cc/parse:make-parse-error "bad syntax" '(5 . 10))))
     (expect (cl-cc/parse:diagnostic-severity d) :to-be :error)
     (expect (cl-cc/parse:diagnostic-message d) :to-equal "bad syntax")
@@ -87,8 +87,8 @@
   (let ((d (cl-cc/parse:make-parse-error "err" '(0 . 1)
              :hints '(("try this" . (0 . 1)))
              :notes '("see docs"))))
-    (expect (length (cl-cc/parse::diagnostic-hints d)) :to-equal 1)
-    (expect (length (cl-cc/parse::diagnostic-notes d)) :to-equal 1)))
+    (expect (length (cl-cc/parse/diagnostics::diagnostic-hints d)) :to-equal 1)
+    (expect (length (cl-cc/parse/diagnostics::diagnostic-notes d)) :to-equal 1)))
 
 (it-sequential "diag-structured-fields"
   (let* ((fix-it (cl-cc/parse:make-fix-it :text "insert )" :span '(5 . 5)))
@@ -165,7 +165,7 @@
       (cl-cc/parse:parse-failure (c)
         (setf caught c)))
     (expect caught :to-be-truthy)
-    (expect (length (cl-cc/parse::parse-failure-diagnostics caught)) :to-equal 1))
+    (expect (length (cl-cc/parse/diagnostics::parse-failure-diagnostics caught)) :to-equal 1))
   (let* ((d1 (cl-cc/parse:make-parse-error "e1" '(0 . 1)))
          (d2 (cl-cc/parse:make-parse-error "e2" '(2 . 3)))
          (msg (handler-case

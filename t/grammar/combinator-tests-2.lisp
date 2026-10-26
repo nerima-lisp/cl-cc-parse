@@ -10,13 +10,13 @@
 
 (it-sequential "comb-opt-match"
   (let ((s (toks :T-INT 42)))
-    (multiple-value-bind (ast rest) (cl-cc/parse::parse-opt* '(token :T-INT) s)
+    (multiple-value-bind (ast rest) (cl-cc/parse/grammar::parse-opt* '(token :T-INT) s)
       (expect ast :to-equal 42)
       (expect rest :to-be-null))))
 
 (it-sequential "comb-opt-absent"
   (let ((s (toks :T-IDENT "x")))
-    (multiple-value-bind (ast rest) (cl-cc/parse::parse-opt* '(token :T-INT) s)
+    (multiple-value-bind (ast rest) (cl-cc/parse/grammar::parse-opt* '(token :T-INT) s)
       (expect ast :to-equal :opt-absent)
       (expect (length rest) :to-equal 1))))
 
@@ -26,13 +26,13 @@
   (let ((cl-cc/parse:*grammar-rules* (make-hash-table)))
     (setf (gethash :my-int cl-cc/parse:*grammar-rules*) '(token :T-INT))
     (let ((s (toks :T-INT 99)))
-      (multiple-value-bind (ast rest) (cl-cc/parse::parse-rule :my-int s)
+      (multiple-value-bind (ast rest) (cl-cc/parse/grammar::parse-rule :my-int s)
         (expect ast :to-equal 99)
         (expect rest :to-be-null)))))
 
 (it-sequential "comb-parse-rule-undefined-error"
   (let ((cl-cc/parse:*grammar-rules* (make-hash-table)))
-    (signals error (cl-cc/parse::parse-rule :no-such-rule nil))))
+    (signals error (cl-cc/parse/grammar::parse-rule :no-such-rule nil))))
 
 ;;; ─── parse-combinator (dispatcher) ─────────────────────────────────────────
 

@@ -12,7 +12,7 @@
 (defun make-test-ctx (source)
   "Create a generic pratt-context from SOURCE string for parser-engine tests."
   (let ((tokens (cl-cc/parse/reader:lex-all source)))
-    (cl-cc/parse::make-pratt-context
+    (cl-cc/parse/grammar::make-pratt-context
      :tokens tokens
      :source source
      :source-file nil
@@ -35,20 +35,20 @@
 
 (it-sequential "pratt-peek-behavior"
   (let ((ctx (make-test-ctx "42")))
-    (let ((tok (cl-cc/parse::pratt-peek ctx)))
+    (let ((tok (cl-cc/parse/grammar::pratt-peek ctx)))
       (expect (not (null tok)) :to-be-truthy)
       (expect (cl-cc/bootstrap:lexer-token-type tok) :to-be :T-INT)))
   (let ((ctx (make-test-ctx "42")))
-    (let ((tok1 (cl-cc/parse::pratt-peek ctx))
-          (tok2 (cl-cc/parse::pratt-peek ctx)))
+    (let ((tok1 (cl-cc/parse/grammar::pratt-peek ctx))
+          (tok2 (cl-cc/parse/grammar::pratt-peek ctx)))
       (expect tok2 :to-be tok1))))
 
 (it-sequential "pratt-advance-consumes-token"
   (let ((ctx (make-test-ctx "1 2")))
-    (let ((tok1 (cl-cc/parse::pratt-advance ctx)))
+    (let ((tok1 (cl-cc/parse/grammar::pratt-advance ctx)))
       (expect (cl-cc/bootstrap:lexer-token-type tok1) :to-be :T-INT)
       (expect (= 1 (cl-cc/bootstrap:lexer-token-value tok1)) :to-be-truthy))
-    (let ((tok2 (cl-cc/parse::pratt-advance ctx)))
+    (let ((tok2 (cl-cc/parse/grammar::pratt-advance ctx)))
       (expect (cl-cc/bootstrap:lexer-token-type tok2) :to-be :T-INT)
       (expect (= 2 (cl-cc/bootstrap:lexer-token-value tok2)) :to-be-truthy))))
 
@@ -56,68 +56,68 @@
   (destructuring-bind (source expected advance-first) (list "" t nil)
     (let ((ctx (make-test-ctx source)))
     (when advance-first
-      (cl-cc/parse::pratt-advance ctx))
+      (cl-cc/parse/grammar::pratt-advance ctx))
     (if expected
-        (expect (cl-cc/parse::pratt-at-end-p ctx) :to-be-truthy)
-        (expect (cl-cc/parse::pratt-at-end-p ctx) :to-be-falsy)))))
+        (expect (cl-cc/parse/grammar::pratt-at-end-p ctx) :to-be-truthy)
+        (expect (cl-cc/parse/grammar::pratt-at-end-p ctx) :to-be-falsy)))))
 
 (it-sequential "pratt-at-end-p-states non-empty"
   (destructuring-bind (source expected advance-first) (list "42" nil nil)
     (let ((ctx (make-test-ctx source)))
     (when advance-first
-      (cl-cc/parse::pratt-advance ctx))
+      (cl-cc/parse/grammar::pratt-advance ctx))
     (if expected
-        (expect (cl-cc/parse::pratt-at-end-p ctx) :to-be-truthy)
-        (expect (cl-cc/parse::pratt-at-end-p ctx) :to-be-falsy)))))
+        (expect (cl-cc/parse/grammar::pratt-at-end-p ctx) :to-be-truthy)
+        (expect (cl-cc/parse/grammar::pratt-at-end-p ctx) :to-be-falsy)))))
 
 (it-sequential "pratt-at-end-p-states after-advance"
   (destructuring-bind (source expected advance-first) (list "x" t t)
     (let ((ctx (make-test-ctx source)))
     (when advance-first
-      (cl-cc/parse::pratt-advance ctx))
+      (cl-cc/parse/grammar::pratt-advance ctx))
     (if expected
-        (expect (cl-cc/parse::pratt-at-end-p ctx) :to-be-truthy)
-        (expect (cl-cc/parse::pratt-at-end-p ctx) :to-be-falsy)))))
+        (expect (cl-cc/parse/grammar::pratt-at-end-p ctx) :to-be-truthy)
+        (expect (cl-cc/parse/grammar::pratt-at-end-p ctx) :to-be-falsy)))))
 
 ;;; ─── Token Accessors ─────────────────────────────────────────────────────────
 
 (it-sequential "pratt-tok-type-via-context"
   (let* ((ctx (make-test-ctx "hello"))
-         (tok (cl-cc/parse::pratt-peek ctx)))
-    (expect (cl-cc/parse::pratt-tok-type ctx tok) :to-be :T-IDENT)))
+         (tok (cl-cc/parse/grammar::pratt-peek ctx)))
+    (expect (cl-cc/parse/grammar::pratt-tok-type ctx tok) :to-be :T-IDENT)))
 
 (it-sequential "pratt-tok-value-via-context"
   (let* ((ctx (make-test-ctx "hello"))
-         (tok (cl-cc/parse::pratt-peek ctx)))
-    (expect (string (cl-cc/parse::pratt-tok-value ctx tok)) :to-equal "HELLO")))
+         (tok (cl-cc/parse/grammar::pratt-peek ctx)))
+    (expect (string (cl-cc/parse/grammar::pratt-tok-value ctx tok)) :to-equal "HELLO")))
 
 (it-sequential "pratt-tok-type-nil-safe"
   (let ((ctx (make-test-ctx "")))
-    (expect (cl-cc/parse::pratt-tok-type ctx nil) :to-be nil)))
+    (expect (cl-cc/parse/grammar::pratt-tok-type ctx nil) :to-be nil)))
 
 ;;; ─── Diagnostics: pratt-expect ───────────────────────────────────────────────
 
 (it-sequential "pratt-expect-matching-type"
   (let ((ctx (make-test-ctx "42")))
-    (let ((tok (cl-cc/parse::pratt-expect ctx :T-INT "test")))
+    (let ((tok (cl-cc/parse/grammar::pratt-expect ctx :T-INT "test")))
       (expect (not (null tok)) :to-be-truthy)
       (expect (cl-cc/bootstrap:lexer-token-type tok) :to-be :T-INT))))
 
 (it-sequential "pratt-expect-adds-diagnostic-on-failure type-mismatch"
   (destructuring-bind (source expected-type label) (list "42" :T-STRING "test")
     (let ((ctx (make-test-ctx source)))
-    (cl-cc/parse::pratt-expect ctx expected-type label)
-    (expect (not (null (cl-cc/parse::pratt-context-diagnostics ctx))) :to-be-truthy))))
+    (cl-cc/parse/grammar::pratt-expect ctx expected-type label)
+    (expect (not (null (cl-cc/parse/grammar::pratt-context-diagnostics ctx))) :to-be-truthy))))
 
 (it-sequential "pratt-expect-adds-diagnostic-on-failure eof"
   (destructuring-bind (source expected-type label) (list "" :T-INT "eof-test")
     (let ((ctx (make-test-ctx source)))
-    (cl-cc/parse::pratt-expect ctx expected-type label)
-    (expect (not (null (cl-cc/parse::pratt-context-diagnostics ctx))) :to-be-truthy))))
+    (cl-cc/parse/grammar::pratt-expect ctx expected-type label)
+    (expect (not (null (cl-cc/parse/grammar::pratt-context-diagnostics ctx))) :to-be-truthy))))
 
 (it-sequential "pratt-expect-mismatch-returns-nil"
   (let ((ctx (make-test-ctx "42")))
-    (let ((result (cl-cc/parse::pratt-expect ctx :T-STRING)))
+    (let ((result (cl-cc/parse/grammar::pratt-expect ctx :T-STRING)))
       (expect result :to-be nil))))
 
 ;;; ─── parse-cl-source: CST Structure ─────────────────────────────────────────

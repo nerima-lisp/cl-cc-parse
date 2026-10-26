@@ -131,23 +131,23 @@
 
 (it-sequential "grammar-token-stream-cases struct-fields"
   (destructuring-bind (verify) (list (lambda ()
-             (let ((ts (cl-cc/parse::make-token-stream :tokens nil :source "test")))
-               (expect (cl-cc/parse::token-stream-p ts) :to-be-truthy)
-               (expect (cl-cc/parse::token-stream-tokens ts) :to-be-null)
-               (expect (cl-cc/parse::token-stream-source ts) :to-equal "test"))))
+             (let ((ts (cl-cc/parse/grammar::make-token-stream :tokens nil :source "test")))
+               (expect (cl-cc/parse/grammar::token-stream-p ts) :to-be-truthy)
+               (expect (cl-cc/parse/grammar::token-stream-tokens ts) :to-be-null)
+               (expect (cl-cc/parse/grammar::token-stream-source ts) :to-equal "test"))))
     (funcall verify)))
 
 (it-sequential "grammar-token-stream-cases empty-peek"
   (destructuring-bind (verify) (list (lambda ()
-             (let ((ts (cl-cc/parse::make-token-stream :tokens nil :source "")))
-               (expect (cl-cc/parse::ts-peek ts) :to-be-null)
-               (expect (cl-cc/parse::ts-at-end-p ts) :to-be-truthy))))
+             (let ((ts (cl-cc/parse/grammar::make-token-stream :tokens nil :source "")))
+               (expect (cl-cc/parse/grammar::ts-peek ts) :to-be-null)
+               (expect (cl-cc/parse/grammar::ts-at-end-p ts) :to-be-truthy))))
     (funcall verify)))
 
 (it-sequential "grammar-token-stream-cases eof-returns-nil"
   (destructuring-bind (verify) (list (lambda ()
-             (let ((ts (cl-cc/parse::make-token-stream :tokens nil :source "")))
-               (expect (cl-cc/parse::parse-cl-form ts) :to-be-null))))
+             (let ((ts (cl-cc/parse/grammar::make-token-stream :tokens nil :source "")))
+               (expect (cl-cc/parse/grammar::parse-cl-form ts) :to-be-null))))
     (funcall verify)))
 
 ;;; ─── parse-compiler-lambda-list ─────────────────────────────────────────────

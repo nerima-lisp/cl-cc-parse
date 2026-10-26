@@ -97,7 +97,7 @@
     (expect (char= (char val 1) expected-middle) :to-be-truthy))))
 
 (it-sequential "lexer-string-escape-table-has-six-entries"
-  (expect (= 6 (length cl-cc/parse::*lex-string-escape-table*)) :to-be-truthy))
+  (expect (= 6 (length cl-cc/parse/reader::*lex-string-escape-table*)) :to-be-truthy))
 
 ;;; ─── Symbol Tokens ──────────────────────────────────────────────────────────
 

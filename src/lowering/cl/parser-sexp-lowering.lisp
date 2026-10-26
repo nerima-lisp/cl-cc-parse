@@ -38,10 +38,10 @@ Each handler is a lambda (node source-file source-line source-column)."
   "Return the registered lowerer for HEAD, accepting package-local spellings."
   (or (gethash head *list-lowering-table*)
       (when (symbolp head)
-        (multiple-value-bind (parse-head status)
-            (find-symbol (symbol-name head) :cl-cc/parse)
+        (multiple-value-bind (lowering-head status)
+            (find-symbol (symbol-name head) :cl-cc/parse/lowering)
           (declare (ignore status))
-          (and parse-head (gethash parse-head *list-lowering-table*))))))
+          (and lowering-head (gethash lowering-head *list-lowering-table*))))))
 
 ;;; ── Setf simple-place rewrite table ─────────────────────────────────────────
 ;;;

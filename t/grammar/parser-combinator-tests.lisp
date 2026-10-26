@@ -156,7 +156,7 @@
   (let ((stream (list (make-tok :T-INT 1) (make-tok :T-OP "+")
                       (make-tok :T-INT 2) (make-tok :T-OP "-")
                       (make-tok :T-INT 3))))
-    (multiple-value-bind (ast rest) (parse-with-grammar :expr stream)
+    (multiple-value-bind (ast rest) (cl-cc/parse/grammar::parse-with-grammar :expr stream)
       (expect (parse-ok-p ast) :to-be-truthy)
       (expect rest :to-be-null)))
   (clear-grammar-rules))

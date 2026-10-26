@@ -10,7 +10,7 @@
 
 (defun make-grammar-token (type value &key (start 0) (end 1))
   "Create a lexer-token for grammar token-stream tests."
-  (cl-cc/parse::make-lexer-token :type type :value value
+  (cl-cc/parse/reader::make-lexer-token :type type :value value
                            :start-byte start :end-byte end
                            :line 1 :column 0))
 
@@ -19,7 +19,7 @@
   (let ((tokens (mapcar (lambda (spec)
                           (apply #'make-grammar-token spec))
                         token-specs)))
-    (cl-cc/parse::make-token-stream :tokens tokens :source "" :source-file nil)))
+    (cl-cc/parse/grammar::make-token-stream :tokens tokens :source "" :source-file nil)))
 
 (defun parse-first-form (source)
   "Parse SOURCE and return the first CST node."
@@ -43,27 +43,27 @@
 
 (it-sequential "grammar-ts-peek-non-empty-stream"
   (let* ((ts (make-grammar-ts '(:T-INT 42) '(:T-INT 99)))
-         (tok (cl-cc/parse::ts-peek ts)))
+         (tok (cl-cc/parse/grammar::ts-peek ts)))
     (expect (cl-cc/bootstrap:lexer-token-type tok) :to-be :T-INT)
     (expect (= 42 (cl-cc/bootstrap:lexer-token-value tok)) :to-be-truthy)
-    (expect (= 42 (cl-cc/bootstrap:lexer-token-value (cl-cc/parse::ts-peek ts))) :to-be-truthy)))
+    (expect (= 42 (cl-cc/bootstrap:lexer-token-value (cl-cc/parse/grammar::ts-peek ts))) :to-be-truthy)))
 
 (it-sequential "grammar-ts-peek-empty-stream-returns-nil"
-  (let ((ts (cl-cc/parse::make-token-stream :tokens nil :source "")))
-    (expect (cl-cc/parse::ts-peek ts) :to-be-null)))
+  (let ((ts (cl-cc/parse/grammar::make-token-stream :tokens nil :source "")))
+    (expect (cl-cc/parse/grammar::ts-peek ts) :to-be-null)))
 
 ;;; ─── Token Stream: ts-advance ──────────────────────────────────────────────
 
 (it-sequential "grammar-ts-advance-consumes-token"
   (let ((ts (make-grammar-ts '(:T-INT 1) '(:T-INT 2) '(:T-INT 3))))
-    (let ((tok1 (cl-cc/parse::ts-advance ts)))
+    (let ((tok1 (cl-cc/parse/grammar::ts-advance ts)))
       (expect (= 1 (cl-cc/bootstrap:lexer-token-value tok1)) :to-be-truthy))
-    (let ((tok2 (cl-cc/parse::ts-advance ts)))
+    (let ((tok2 (cl-cc/parse/grammar::ts-advance ts)))
       (expect (= 2 (cl-cc/bootstrap:lexer-token-value tok2)) :to-be-truthy))
-    (let ((tok3 (cl-cc/parse::ts-advance ts)))
+    (let ((tok3 (cl-cc/parse/grammar::ts-advance ts)))
       (expect (= 3 (cl-cc/bootstrap:lexer-token-value tok3)) :to-be-truthy))
     ;; Stream now exhausted
-    (expect (cl-cc/parse::ts-advance ts) :to-be-null)))
+    (expect (cl-cc/parse/grammar::ts-advance ts) :to-be-null)))
 
 ;;; ─── Token Stream: ts-peek-type ────────────────────────────────────────────
 
@@ -71,67 +71,67 @@
   (destructuring-bind (scenario expected) (list :non-empty :T-STRING)
     (let ((ts (ecase scenario
                (:non-empty (make-grammar-ts '(:T-STRING "hello")))
-               (:empty     (cl-cc/parse::make-token-stream :tokens nil :source "")))))
-    (expect (cl-cc/parse::ts-peek-type ts) :to-equal expected))))
+               (:empty     (cl-cc/parse/grammar::make-token-stream :tokens nil :source "")))))
+    (expect (cl-cc/parse/grammar::ts-peek-type ts) :to-equal expected))))
 
 (it-sequential "grammar-ts-peek-type-cases empty"
   (destructuring-bind (scenario expected) (list :empty nil)
     (let ((ts (ecase scenario
                (:non-empty (make-grammar-ts '(:T-STRING "hello")))
-               (:empty     (cl-cc/parse::make-token-stream :tokens nil :source "")))))
-    (expect (cl-cc/parse::ts-peek-type ts) :to-equal expected))))
+               (:empty     (cl-cc/parse/grammar::make-token-stream :tokens nil :source "")))))
+    (expect (cl-cc/parse/grammar::ts-peek-type ts) :to-equal expected))))
 
 ;;; ─── Token Stream: ts-expect ───────────────────────────────────────────────
 
 (it-sequential "grammar-ts-expect-behavior"
   (let* ((ts (make-grammar-ts '(:T-INT 42)))
-         (tok (cl-cc/parse::ts-expect ts :T-INT)))
+         (tok (cl-cc/parse/grammar::ts-expect ts :T-INT)))
     (expect (not (null tok)) :to-be-truthy)
     (expect (= 42 (cl-cc/bootstrap:lexer-token-value tok)) :to-be-truthy)
     ;; Stream is empty after consuming the token
-    (expect (cl-cc/parse::ts-peek ts) :to-be-null))
+    (expect (cl-cc/parse/grammar::ts-peek ts) :to-be-null))
   (let* ((ts (make-grammar-ts '(:T-INT 42)))
-         (result (cl-cc/parse::ts-expect ts :T-STRING)))
+         (result (cl-cc/parse/grammar::ts-expect ts :T-STRING)))
     (expect result :to-be-null)
-    (expect (not (null (cl-cc/parse::token-stream-diagnostics ts))) :to-be-truthy)
+    (expect (not (null (cl-cc/parse/grammar::token-stream-diagnostics ts))) :to-be-truthy)
     ;; Token was NOT consumed
-    (expect (= 42 (cl-cc/bootstrap:lexer-token-value (cl-cc/parse::ts-peek ts))) :to-be-truthy))
-  (let* ((ts (cl-cc/parse::make-token-stream :tokens nil :source ""))
-         (result (cl-cc/parse::ts-expect ts :T-RPAREN)))
+    (expect (= 42 (cl-cc/bootstrap:lexer-token-value (cl-cc/parse/grammar::ts-peek ts))) :to-be-truthy))
+  (let* ((ts (cl-cc/parse/grammar::make-token-stream :tokens nil :source ""))
+         (result (cl-cc/parse/grammar::ts-expect ts :T-RPAREN)))
     (expect result :to-be-null)
-    (expect (not (null (cl-cc/parse::token-stream-diagnostics ts))) :to-be-truthy)))
+    (expect (not (null (cl-cc/parse/grammar::token-stream-diagnostics ts))) :to-be-truthy)))
 
 ;;; ─── Token Stream: ts-at-end-p ─────────────────────────────────────────────
 
 (it-sequential "grammar-ts-at-end-p-cases empty"
   (destructuring-bind (scenario expected) (list :empty t)
     (let ((ts (ecase scenario
-               (:empty     (cl-cc/parse::make-token-stream :tokens nil :source ""))
+               (:empty     (cl-cc/parse/grammar::make-token-stream :tokens nil :source ""))
                (:non-empty (make-grammar-ts '(:T-INT 42)))
                (:eof       (make-grammar-ts '(:T-EOF nil))))))
     (if expected
-        (expect (cl-cc/parse::ts-at-end-p ts) :to-be-truthy)
-        (expect (cl-cc/parse::ts-at-end-p ts) :to-be-falsy)))))
+        (expect (cl-cc/parse/grammar::ts-at-end-p ts) :to-be-truthy)
+        (expect (cl-cc/parse/grammar::ts-at-end-p ts) :to-be-falsy)))))
 
 (it-sequential "grammar-ts-at-end-p-cases non-empty"
   (destructuring-bind (scenario expected) (list :non-empty nil)
     (let ((ts (ecase scenario
-               (:empty     (cl-cc/parse::make-token-stream :tokens nil :source ""))
+               (:empty     (cl-cc/parse/grammar::make-token-stream :tokens nil :source ""))
                (:non-empty (make-grammar-ts '(:T-INT 42)))
                (:eof       (make-grammar-ts '(:T-EOF nil))))))
     (if expected
-        (expect (cl-cc/parse::ts-at-end-p ts) :to-be-truthy)
-        (expect (cl-cc/parse::ts-at-end-p ts) :to-be-falsy)))))
+        (expect (cl-cc/parse/grammar::ts-at-end-p ts) :to-be-truthy)
+        (expect (cl-cc/parse/grammar::ts-at-end-p ts) :to-be-falsy)))))
 
 (it-sequential "grammar-ts-at-end-p-cases eof-token"
   (destructuring-bind (scenario expected) (list :eof t)
     (let ((ts (ecase scenario
-               (:empty     (cl-cc/parse::make-token-stream :tokens nil :source ""))
+               (:empty     (cl-cc/parse/grammar::make-token-stream :tokens nil :source ""))
                (:non-empty (make-grammar-ts '(:T-INT 42)))
                (:eof       (make-grammar-ts '(:T-EOF nil))))))
     (if expected
-        (expect (cl-cc/parse::ts-at-end-p ts) :to-be-truthy)
-        (expect (cl-cc/parse::ts-at-end-p ts) :to-be-falsy)))))
+        (expect (cl-cc/parse/grammar::ts-at-end-p ts) :to-be-truthy)
+        (expect (cl-cc/parse/grammar::ts-at-end-p ts) :to-be-falsy)))))
 
 ;;; ─── Token Stream: ts-token-value ──────────────────────────────────────────
 
@@ -139,36 +139,36 @@
   (destructuring-bind (scenario expected) (list :non-empty 42)
     (let ((ts (ecase scenario
                (:non-empty (make-grammar-ts '(:T-INT 42)))
-               (:empty     (cl-cc/parse::make-token-stream :tokens nil :source "")))))
-    (expect (cl-cc/parse::ts-token-value ts) :to-equal expected))))
+               (:empty     (cl-cc/parse/grammar::make-token-stream :tokens nil :source "")))))
+    (expect (cl-cc/parse/grammar::ts-token-value ts) :to-equal expected))))
 
 (it-sequential "grammar-ts-token-value-cases empty"
   (destructuring-bind (scenario expected) (list :empty nil)
     (let ((ts (ecase scenario
                (:non-empty (make-grammar-ts '(:T-INT 42)))
-               (:empty     (cl-cc/parse::make-token-stream :tokens nil :source "")))))
-    (expect (cl-cc/parse::ts-token-value ts) :to-equal expected))))
+               (:empty     (cl-cc/parse/grammar::make-token-stream :tokens nil :source "")))))
+    (expect (cl-cc/parse/grammar::ts-token-value ts) :to-equal expected))))
 
 ;;; ─── parse-cl-atom ─────────────────────────────────────────────────────────
 
 (it-sequential "grammar-parse-cl-atom-value-types integer"
   (destructuring-bind (tok-type tok-value expected) (list :T-INT 42 42)
     (let* ((ts (make-grammar-ts (list tok-type tok-value)))
-         (node (cl-cc/parse::parse-cl-atom ts)))
+         (node (cl-cc/parse/grammar::parse-cl-atom ts)))
     (expect (cl-cc/parse/cst:cst-token-p node) :to-be-truthy)
     (expect (cl-cc/parse/cst:cst-token-value node) :to-equal expected))))
 
 (it-sequential "grammar-parse-cl-atom-value-types string"
   (destructuring-bind (tok-type tok-value expected) (list :T-STRING "hello" "hello")
     (let* ((ts (make-grammar-ts (list tok-type tok-value)))
-         (node (cl-cc/parse::parse-cl-atom ts)))
+         (node (cl-cc/parse/grammar::parse-cl-atom ts)))
     (expect (cl-cc/parse/cst:cst-token-p node) :to-be-truthy)
     (expect (cl-cc/parse/cst:cst-token-value node) :to-equal expected))))
 
 (it-sequential "grammar-parse-cl-atom-value-types keyword"
   (destructuring-bind (tok-type tok-value expected) (list :T-KEYWORD :foo :foo)
     (let* ((ts (make-grammar-ts (list tok-type tok-value)))
-         (node (cl-cc/parse::parse-cl-atom ts)))
+         (node (cl-cc/parse/grammar::parse-cl-atom ts)))
     (expect (cl-cc/parse/cst:cst-token-p node) :to-be-truthy)
     (expect (cl-cc/parse/cst:cst-token-value node) :to-equal expected))))
 
@@ -176,16 +176,16 @@
   (destructuring-bind (scenario) (list :non-atom)
     (let* ((ts (ecase scenario
                (:non-atom (make-grammar-ts (list :T-LPAREN nil)))
-               (:empty    (cl-cc/parse::make-token-stream :tokens nil :source ""))))
-         (node (cl-cc/parse::parse-cl-atom ts)))
+               (:empty    (cl-cc/parse/grammar::make-token-stream :tokens nil :source ""))))
+         (node (cl-cc/parse/grammar::parse-cl-atom ts)))
     (expect node :to-be-null))))
 
 (it-sequential "grammar-parse-cl-atom-nil-cases empty"
   (destructuring-bind (scenario) (list :empty)
     (let* ((ts (ecase scenario
                (:non-atom (make-grammar-ts (list :T-LPAREN nil)))
-               (:empty    (cl-cc/parse::make-token-stream :tokens nil :source ""))))
-         (node (cl-cc/parse::parse-cl-atom ts)))
+               (:empty    (cl-cc/parse/grammar::make-token-stream :tokens nil :source ""))))
+         (node (cl-cc/parse/grammar::parse-cl-atom ts)))
     (expect node :to-be-null))))
 
 ;;; ─── parse-cl-source: atoms ────────────────────────────────────────────────

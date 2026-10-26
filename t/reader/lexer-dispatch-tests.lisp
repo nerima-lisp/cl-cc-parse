@@ -11,6 +11,11 @@
 
 (in-package :cl-cc/parse/reader/test)
 
+(defmacro assert-parse-boolean-case (expected form)
+  `(if ,expected
+       (expect ,form :to-be-truthy)
+       (expect ,form :to-be-falsy)))
+
 ;;; ─── Helpers ────────────────────────────────────────────────────────────────
 
 (defun lexer-dispatch-lex-types (source)
@@ -34,7 +39,7 @@
 (defun lexer-dispatch-read-form-text (source)
   "Use internal lex-read-form-text to extract the raw form text from SOURCE."
   (let ((state (cl-cc/parse:make-lexer source)))
-    (cl-cc/parse::lex-read-form-text state)))
+    (cl-cc/parse/reader::lex-read-form-text state)))
 
 ;;; ─── lex-feature-present-p ───────────────────────────────────────────────────
 
@@ -42,32 +47,32 @@
   (destructuring-bind (feature expected) (list :cl-cc-present t)
     (let ((*features* '(:cl-cc-present :common-lisp)))
     (assert-parse-boolean-case expected
-        (cl-cc/parse::lex-feature-present-p feature)))))
+        (cl-cc/parse/reader::lex-feature-present-p feature)))))
 
 (it-sequential "lex-feature-present-p-keyword-lookup absent"
   (destructuring-bind (feature expected) (list :no-such-feature nil)
     (let ((*features* '(:cl-cc-present :common-lisp)))
     (assert-parse-boolean-case expected
-        (cl-cc/parse::lex-feature-present-p feature)))))
+        (cl-cc/parse/reader::lex-feature-present-p feature)))))
 
 (it-sequential "lex-feature-present-p-or-any-present"
   (let ((*features* '(:cl-cc-present)))
-      (expect (cl-cc/parse::lex-feature-present-p '(:or :cl-cc-present :ccl)) :to-be-truthy)
-      (expect (cl-cc/parse::lex-feature-present-p '(:or :ccl :ecl)) :to-be-null)))
+      (expect (cl-cc/parse/reader::lex-feature-present-p '(:or :cl-cc-present :ccl)) :to-be-truthy)
+      (expect (cl-cc/parse/reader::lex-feature-present-p '(:or :ccl :ecl)) :to-be-null)))
 
 (it-sequential "lex-feature-present-p-and-all-required"
   (let ((*features* '(:cl-cc-present :common-lisp)))
-      (expect (cl-cc/parse::lex-feature-present-p '(:and :cl-cc-present :common-lisp)) :to-be-truthy)
-      (expect (cl-cc/parse::lex-feature-present-p '(:and :cl-cc-present :ccl)) :to-be-null)))
+      (expect (cl-cc/parse/reader::lex-feature-present-p '(:and :cl-cc-present :common-lisp)) :to-be-truthy)
+      (expect (cl-cc/parse/reader::lex-feature-present-p '(:and :cl-cc-present :ccl)) :to-be-null)))
 
 (it-sequential "lex-feature-present-p-not-negates"
   (let ((*features* '(:cl-cc-present)))
-      (expect (cl-cc/parse::lex-feature-present-p '(:not :cl-cc-present)) :to-be-null)
-      (expect (cl-cc/parse::lex-feature-present-p '(:not :ccl)) :to-be-truthy)))
+      (expect (cl-cc/parse/reader::lex-feature-present-p '(:not :cl-cc-present)) :to-be-null)
+      (expect (cl-cc/parse/reader::lex-feature-present-p '(:not :ccl)) :to-be-truthy)))
 
 (it-sequential "lex-feature-present-p-unknown-returns-nil"
-  (expect (cl-cc/parse::lex-feature-present-p 42) :to-be-null)
-  (expect (cl-cc/parse::lex-feature-present-p '(:unknown :foo)) :to-be-null))
+  (expect (cl-cc/parse/reader::lex-feature-present-p 42) :to-be-null)
+  (expect (cl-cc/parse/reader::lex-feature-present-p '(:unknown :foo)) :to-be-null))
 
 ;;; ─── lex-read-form-text ──────────────────────────────────────────────────────
 
