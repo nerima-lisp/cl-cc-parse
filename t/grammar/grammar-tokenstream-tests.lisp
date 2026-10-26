@@ -12,9 +12,13 @@
 ;;; ─── Token construction helpers ──────────────────────────────────────────
 
 (defun make-test-token (type value &optional (start 0) (end 1))
-  "Build a lexer-token for testing."
-  (cl-cc/parse/reader::make-lexer-token :type type :value value
-                            :start-byte start :end-byte end :trivia nil))
+  "Build a lexer token through the public reader API for testing."
+  (let ((token (first (cl-cc/parse/reader:lex-all "x"))))
+    (setf (cl-cc/bootstrap:lexer-token-type token) type
+          (cl-cc/bootstrap:lexer-token-value token) value
+          (cl-cc/parse/reader:lexer-token-start-byte token) start
+          (cl-cc/parse/reader:lexer-token-end-byte token) end)
+    token))
 
 (defun make-test-ts (token-list &optional (source ""))
   "Build a token-stream from a list of lexer-tokens."
@@ -118,3 +122,51 @@
 
 (it-sequential "parse-cl-source-empty-string-returns-list"
   (expect (listp (cl-cc/parse:parse-cl-source "")) :to-be-truthy))
+
+(in-package :cl-cc/parse/grammar/test)
+
+(it-sequential "grammar-parse-cl-source-cases diagnostics-list"
+  (destructuring-bind (verify) (list (lambda ()
+             (multiple-value-bind (cst-list diagnostics)
+                 (cl-cc/parse:parse-cl-source "(+ 1 2)")
+               (declare (ignore cst-list))
+               (expect (listp diagnostics) :to-be-truthy))))
+    (funcall verify)))
+
+(it-sequential "grammar-parse-cl-source-cases empty-yields-nil"
+  (destructuring-bind (verify) (list (lambda ()
+             (multiple-value-bind (cst-list diagnostics)
+                 (cl-cc/parse:parse-cl-source "")
+               (declare (ignore diagnostics))
+               (expect cst-list :to-be-null))))
+    (funcall verify)))
+
+(it-sequential "grammar-parse-cl-source-cases single-form-cst"
+  (destructuring-bind (verify) (list (lambda ()
+             (multiple-value-bind (cst-list diagnostics)
+                 (cl-cc/parse:parse-cl-source "(+ 1 2)")
+               (declare (ignore diagnostics))
+               (expect (= 1 (length cst-list)) :to-be-truthy)
+               (expect (cl-cc/parse/cst:cst-interior-p (first cst-list)) :to-be-truthy))))
+    (funcall verify)))
+
+(it-sequential "grammar-token-stream-cases eof-returns-nil"
+  (destructuring-bind (verify) (list (lambda ()
+             (let ((ts (cl-cc/parse/grammar::make-token-stream :tokens nil :source "")))
+               (expect (cl-cc/parse/grammar::parse-cl-form ts) :to-be-null))))
+    (funcall verify)))
+
+(it-sequential "grammar-token-stream-cases empty-peek"
+  (destructuring-bind (verify) (list (lambda ()
+             (let ((ts (cl-cc/parse/grammar::make-token-stream :tokens nil :source "")))
+               (expect (cl-cc/parse/grammar::ts-peek ts) :to-be-null)
+               (expect (cl-cc/parse/grammar::ts-at-end-p ts) :to-be-truthy))))
+    (funcall verify)))
+
+(it-sequential "grammar-token-stream-cases struct-fields"
+  (destructuring-bind (verify) (list (lambda ()
+             (let ((ts (cl-cc/parse/grammar::make-token-stream :tokens nil :source "test")))
+               (expect (cl-cc/parse/grammar::token-stream-p ts) :to-be-truthy)
+               (expect (cl-cc/parse/grammar::token-stream-tokens ts) :to-be-null)
+               (expect (cl-cc/parse/grammar::token-stream-source ts) :to-equal "test"))))
+    (funcall verify)))

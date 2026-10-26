@@ -9,10 +9,13 @@
 ;;; ─── Helper ──────────────────────────────────────────────────────────────────
 
 (defun make-grammar-token (type value &key (start 0) (end 1))
-  "Create a lexer-token for grammar token-stream tests."
-  (cl-cc/parse/reader::make-lexer-token :type type :value value
-                           :start-byte start :end-byte end
-                           :line 1 :column 0))
+  "Create a lexer token through the public reader API for grammar tests."
+  (let ((token (first (cl-cc/parse/reader:lex-all "x"))))
+    (setf (cl-cc/bootstrap:lexer-token-type token) type
+          (cl-cc/bootstrap:lexer-token-value token) value
+          (cl-cc/parse/reader:lexer-token-start-byte token) start
+          (cl-cc/parse/reader:lexer-token-end-byte token) end)
+    token))
 
 (defun make-grammar-ts (&rest token-specs)
   "Create a token-stream from TOKEN-SPECS: each is (type value) or (type value :start s :end e)."
