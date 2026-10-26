@@ -1,3 +1,3 @@
-(in-package :cl-cc-parse/test/grammar)
+(in-package :cl-cc/parse/grammar/test)
 
 (describe-concurrent "grammar feature")

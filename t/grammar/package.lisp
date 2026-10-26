@@ -1,9 +1,4 @@
-(defpackage :cl-cc-parse/test/grammar
+(defpackage :cl-cc/parse/grammar/test
   (:use :cl)
-  (:import-from :cl-weave :describe-concurrent :describe-sequential :it :expect)
-  (:import-from :cl-cc/parse/grammar
-                :make-pratt-context
-                :pratt-context-tokens
-                :pratt-context-nud-table
-                :pratt-context-led-table
-                :pratt-parse-expr))
+  (:import-from :cl-weave :describe-concurrent :it-sequential :expect :signals)
+  (:export :make-test-ctx :parse-one-cst :parse-one-sexp))
