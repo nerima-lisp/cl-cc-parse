@@ -1,17 +1,9 @@
 {
-  description = "cl-cc AST node types and protocol (ast-children, ast-bound-names)";
+  description = "CL-CC parse features and parser adapters";
 
   inputs = {
-    # nixos-unstable, not nixpkgs-unstable: it advances only after the NixOS
-    # release tests pass, so it is less likely to land a broken build.
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
 
-    # Pinned to a release tag. A bare `github:nerima-lisp/cl-weave` follows
-    # that repository's default branch, so an upstream push to main would
-    # break this repository's CI without warning. This used to be a
-    # `flake = false` source tree handed to the runner through an environment
-    # variable; it is a normal flake input now, which is what lets ASDF find
-    # cl-weave through CL_SOURCE_REGISTRY like any other dependency.
     cl-cc-ast = {
       url = "github:nerima-lisp/cl-cc-ast/a45c5acecfccb91a43f6a04251e8a5d6ec3d3213";
       flake = false;
@@ -20,11 +12,19 @@
       url = "github:nerima-lisp/cl-cc-bootstrap/027f6c9826010c15789454e69abd2930738b50af";
       flake = false;
     };
+    cl-parser-kit = {
+      url = "github:nerima-lisp/cl-parser-kit/aad0f88727940ff3f4e8674943e3faa240206f45";
+      flake = false;
+    };
     cl-weave = {
       url = "github:nerima-lisp/cl-weave/v1.4.0";
       inputs.nixpkgs.follows = "nixpkgs";
+      inputs.cl-nix-forge.follows = "cl-nix-forge";
     };
-
+    cl-nix-forge = {
+      url = "github:nerima-lisp/cl-nix-forge/950a8224940539a97c112a6b872f0ae5b6c115db";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
     treefmt-nix = {
       url = "github:numtide/treefmt-nix";
       inputs.nixpkgs.follows = "nixpkgs";
@@ -32,163 +32,88 @@
   };
 
   outputs =
-    inputs@{
+    {
       self,
       nixpkgs,
-      cl-weave,
       cl-cc-ast,
       cl-cc-bootstrap,
+      cl-parser-kit,
+      cl-weave,
+      cl-nix-forge,
       treefmt-nix,
       ...
     }:
     let
-      systems = [
-        "x86_64-linux"
-      ];
-      forAllSystems = nixpkgs.lib.genAttrs systems;
-
-      # CL_SOURCE_REGISTRY for the test, coverage and dev environments.
-      sourceRegistry = "${cl-weave}//:${cl-cc-ast}//:${cl-cc-bootstrap}//:${self}//";
-
-      # Single source of truth for the package version: the `:version` form in
-      # cl-cc-parse.asd. A release only ever edits the .asd file and every Nix
-      # package (default + docs) follows automatically. Nix regexes are
-      # whole-string anchored and `.` never spans newlines, so the version is
-      # extracted line-by-line rather than with one multi-line match.
-      version =
-        let
-          lines = nixpkgs.lib.splitString "\n" (builtins.readFile ./cl-cc-parse.asd);
-          versionLine = builtins.head (
-            builtins.filter (line: builtins.match "[[:space:]]*:version \"[^\"]*\"" line != null) lines
-          );
-        in
-        builtins.head (builtins.match "[[:space:]]*:version \"([^\"]*)\"" versionLine);
-
-      # treefmt drives `nix fmt` and the `checks.<system>.formatting` gate.
-      # Scope is Nix only: nixfmt (RFC-style) is a zero-footgun, low-diff
-      # formatter, whereas YAML formatters mangle the GitHub Actions `on:`
-      # key and Markdown reformatting would churn the whole docs tree.
-      treefmtEval = forAllSystems (
-        system:
-        treefmt-nix.lib.evalModule nixpkgs.legacyPackages.${system} {
-          projectRootFile = "flake.nix";
-          programs.nixfmt.enable = true;
-        }
-      );
+      lib = nixpkgs.lib;
+      systems = [ "x86_64-linux" ];
     in
-    {
-      packages = forAllSystems (
-        system:
-        let
-          pkgs = nixpkgs.legacyPackages.${system};
-        in
-        rec {
-          cl-cc-parse = pkgs.sbcl.buildASDFSystem {
-            pname = "cl-cc-parse";
-            inherit version;
-            src = self;
-            systems = [ "cl-cc-parse" ];
-          };
-          default = cl-cc-parse;
+    cl-nix-forge.lib.${builtins.head systems}.mkPackageFlake {
+      inherit self nixpkgs systems;
+      pname = "cl-cc-parse";
+      asd = ./cl-cc-parse.asd;
+      root = ./.;
+      sourceInclude = [ ./t/export-surface.txt ];
 
-          # Rendered documentation site (Material for MkDocs).
-          # Build fully offline: Material for MkDocs bundles all of its assets,
-          # so no network access is required inside the Nix sandbox. --strict
-          # promotes broken links and unlisted pages to build failures.
-        }
-      );
+      meta = {
+        description = "CL-CC parse features and parser adapters";
+        homepage = "https://github.com/nerima-lisp/cl-cc-parse";
+        license = lib.licenses.mit;
+        platforms = lib.platforms.unix;
+      };
 
-      # `nix fmt` entry point.
-      formatter = forAllSystems (system: treefmtEval.${system}.config.build.wrapper);
+      # Built derivations provide FASLs; raw input paths cannot accept writes.
+      lispDependencies = ctx: [
+        (ctx.cl.lispDerivation {
+          lispSystem = "cl-cc-ast";
+          version = ctx.cl.fromAsdSystem "${cl-cc-ast}/cl-cc-ast.asd";
+          src = cl-cc-ast;
+          lispDependencies = [ ];
+        })
+        (ctx.cl.lispDerivation {
+          lispSystem = "cl-cc-bootstrap";
+          version = ctx.cl.fromAsdSystem "${cl-cc-bootstrap}/cl-cc-bootstrap.asd";
+          src = cl-cc-bootstrap;
+          lispDependencies = [ ];
+        })
+        (ctx.cl.lispDerivation {
+          lispSystem = "cl-parser-kit";
+          version = ctx.cl.fromAsdSystem "${cl-parser-kit}/cl-parser-kit.asd";
+          src = cl-parser-kit;
+          lispDependencies = [ ];
+        })
+      ];
+      lispCheckDependencies = ctx: [ cl-weave.packages.${ctx.system}.cl-weave ];
+      timeoutSeconds = 120;
+      killAfterSeconds = 15;
+      treefmt.evalModule = treefmt-nix.lib.evalModule;
 
-      # Granularity lives here, NOT in extra GitHub Actions jobs: `nix flake
-      # check` evaluates each attribute as its own derivation, in parallel,
-      # with build caching. Add a check here rather than a job in ci.yml.
-      checks = forAllSystems (
-        system:
-        let
-          pkgs = nixpkgs.legacyPackages.${system};
-        in
-        {
-          default =
-            pkgs.runCommand "cl-cc-parse-tests"
-              {
-                nativeBuildInputs = [
-                  pkgs.sbcl
-                  pkgs.coreutils
-                ];
-                CL_SOURCE_REGISTRY = sourceRegistry;
-              }
-              ''
-                export HOME="$TMPDIR/home"
-                mkdir -p "$HOME" "$out"
-                timeout 120 sbcl --script ${self}/run-tests.lisp
-                touch "$out/passed"
-              '';
-
-          orphan-tests =
-            pkgs.runCommand "cl-cc-parse-orphan-tests"
-              {
-                nativeBuildInputs = [
-                  pkgs.sbcl
-                  pkgs.coreutils
-                ];
-              }
-              ''
-                set -euo pipefail
-                export HOME="$TMPDIR/home"
-                mkdir -p "$HOME"
-                timeout 120 sbcl --noinform --eval '(require :asdf)' \
-                  --script ${self}/check-orphan-tests.lisp ${self}
-                touch "$out"
-              '';
-
-          # Fails `nix flake check` when any tracked file is unformatted,
-          # turning the formatter into an enforced CI gate.
-          formatting = treefmtEval.${system}.config.build.check self;
-
-        }
-      );
-
-      apps = forAllSystems (
-        system:
-        let
-          pkgs = nixpkgs.legacyPackages.${system};
-          test = pkgs.writeShellApplication {
-            name = "cl-cc-parse-test";
-            runtimeInputs = [
-              pkgs.sbcl
-              pkgs.coreutils
-            ];
-            text = ''
-              export CL_SOURCE_REGISTRY="${sourceRegistry}"
-              exec timeout 120 sbcl --script ${self}/run-tests.lisp
-            '';
-          };
-        in
-        {
-          default = {
-            type = "app";
-            program = "${test}/bin/cl-cc-parse-test";
-          };
-          test = {
-            type = "app";
-            program = "${test}/bin/cl-cc-parse-test";
-          };
-        }
-      );
-
-      devShells = forAllSystems (
-        system:
-        let
-          pkgs = nixpkgs.legacyPackages.${system};
-        in
-        {
-          default = pkgs.mkShell {
-            packages = [ pkgs.sbcl ];
-            CL_SOURCE_REGISTRY = sourceRegistry;
-          };
-        }
-      );
+      extraOutputs = ctx: {
+        checks.feature-lint = ctx.cl.mkFeatureLintCheck {
+          src = ./.;
+          featureDefinitions = "nix/feature-dependencies.sexp";
+          glossary = "docs/src/reference/glossary.md";
+          glossaryHeadingPrefix = "## ";
+          exportSurface = "t/export-surface.txt";
+          mode = "transition";
+          legacyInternalRefs = "t/legacy-internal-refs.sexp";
+          forbiddenNames = [
+            "phases"
+            "misc"
+            "utils"
+            "helpers"
+          ];
+          numberedPrefixes = [
+            "FR-"
+            "W"
+          ];
+          packagePrefix = "cl-cc/parse/";
+          infraSuffix = "/infra";
+        };
+        checks.orphan-tests = ctx.cl.mkOrphanTestCheck {
+          src = ./.;
+          testRoots = [ "t" ];
+          testSystems = [ "cl-cc-parse/test" ];
+        };
+      };
     };
 }

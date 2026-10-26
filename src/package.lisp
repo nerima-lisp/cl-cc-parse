@@ -1,65 +1,104 @@
-;;;; packages/parse/src/package.lisp - CL-CC Parse Package
-;;;;
-;;;; Phase 3 of the package-by-feature monorepo migration. This package owns
-;;;; the CST/lexer/parser/grammar/PHP frontend and diagnostic infrastructure.
-;;;; The facade :cl-cc package uses :cl-cc/parse so compiler modules continue
-;;;; to see parse-* / cst-* / lexer-* / diagnostic-* symbols unqualified.
-;;;;
-;;;; Symbols pre-interned in :cl-cc/bootstrap (MAKE-CST-TOKEN, LEXER-TOKEN-P,
-;;;; LEXER-TOKEN-TYPE, LEXER-TOKEN-VALUE) are intentionally excluded from
-;;;; exports here to avoid NAME-CONFLICT errors. They remain exported from
-;;;; :cl-cc via package-exports-1.lisp.
+;;;; Package declarations for the parse feature modules and compatibility facade.
+;;;; Feature packages own implementation symbols; the facade preserves the W0 API.
 
 (defpackage :cl-cc/parse
-  (:use :cl :cl-cc/ast :cl-cc/bootstrap)
+  (:use :cl)
+  (:import-from :cl-cc/parse/cst
+   #:cst-error #:cst-error-message #:cst-error-p #:cst-child #:cst-children #:cst-collect-errors #:cst-equal-p #:cst-interior #:cst-interior-children #:cst-interior-p #:cst-location-string #:cst-node #:cst-node-end-byte #:cst-node-kind #:cst-node-p #:cst-node-source-file #:cst-node-start-byte #:cst-to-sexp #:cst-token #:cst-token-p #:cst-token-value #:cst-trivia #:cst-walk #:make-cst-error #:make-cst-interior #:make-cst-trivia #:sexp-head-to-kind #:sexp-to-cst)
+  (:import-from :cl-cc/parse/diagnostics
+   #:byte-offset-to-line-col #:diagnostic #:diagnostic-error-code #:diagnostic-fix-it #:diagnostic-message #:diagnostic-severity #:diagnostic-span #:did-you-mean #:fix-it #:fix-it-span #:fix-it-text #:format-diagnostic #:format-diagnostic-list #:make-diagnostic #:make-fix-it #:make-parse-error #:make-parse-warning #:parse-failure #:source-line-at #:undefined-symbol-diagnostic #:warning-as-error-p #:*werror-categories* #:*werror-p*)
+  (:import-from :cl-cc/parse/reader
+   #:lex-all #:lexer-read-token #:lexer-token #:lexer-token-column #:lexer-token-end-byte #:lexer-token-line #:lexer-token-start-byte #:lexer-token-trivia #:make-lexer)
+  (:import-from :cl-cc/parse/incremental
+   #:cache-lookup #:cache-store #:edit-operation #:invalidate-parse-cache #:make-edit-operation #:parse-incremental)
+  (:import-from :cl-cc/parse/grammar
+   #:*grammar-rules* #:clear-grammar-rules #:def-grammar-rule #:parse-all-forms #:parse-cl-source #:parse-cl-source-single #:parse-combinator #:parse-ok-p #:parse-source #:parse-source-for-language #:parse-with-grammar #:query-grammar)
+  (:import-from :cl-cc/parse/lowering
+   #:lambda-list-has-extended-p #:lower-cst-list-to-ast #:lower-cst-to-ast #:lower-sexp-to-ast #:parse-and-lower #:parse-and-lower-one #:parse-compiler-lambda-list #:parse-slot-spec)
   (:export
-   ;; CST node types
-   #:cst-node #:cst-node-p #:cst-node-kind
-   #:cst-node-start-byte #:cst-node-end-byte #:cst-node-source-file
-   #:cst-token #:cst-token-p #:cst-token-value
-   ;; NOTE: make-cst-token excluded (prolog pre-intern conflict)
-   #:cst-interior #:cst-interior-p #:cst-interior-children #:make-cst-interior
-   #:cst-error #:cst-error-p
-   #:cst-error-message #:make-cst-error
-   #:cst-child #:cst-children #:cst-walk #:cst-collect-errors
-   #:cst-to-sexp #:sexp-to-cst #:sexp-head-to-kind
-   #:cst-location-string
-   #:cst-trivia #:make-cst-trivia
+   #:cst-error
+   #:cst-error-message
+   #:cst-error-p
+   #:cst-child
+   #:cst-children
+   #:cst-collect-errors
    #:cst-equal-p
-   ;; Lexer (token struct accessors excluded: prolog pre-intern conflict)
-   #:lexer-token
-   #:lexer-token-start-byte #:lexer-token-end-byte
-   #:lexer-token-line #:lexer-token-column #:lexer-token-trivia
-   ;; NOTE: lexer-token-p, lexer-token-type, lexer-token-value excluded
-   #:make-lexer #:lex-all #:lexer-read-token
-   ;; CL parser
-   #:parse-cl-source #:parse-cl-source-single
-    ;; Diagnostics
-    #:fix-it #:make-fix-it #:fix-it-text #:fix-it-span
-    #:diagnostic #:make-diagnostic
-     #:diagnostic-severity #:diagnostic-message #:diagnostic-span
-     #:diagnostic-error-code #:diagnostic-fix-it
-     #:make-parse-error #:make-parse-warning
-     #:*werror-p* #:*werror-categories* #:warning-as-error-p
-     #:did-you-mean #:undefined-symbol-diagnostic
+   #:cst-interior
+   #:cst-interior-children
+   #:cst-interior-p
+   #:cst-location-string
+   #:cst-node
+   #:cst-node-end-byte
+   #:cst-node-kind
+   #:cst-node-p
+   #:cst-node-source-file
+   #:cst-node-start-byte
+   #:cst-to-sexp
+   #:cst-token
+   #:cst-token-p
+   #:cst-token-value
+   #:cst-trivia
+   #:cst-walk
+   #:make-cst-error
+   #:make-cst-interior
+   #:make-cst-trivia
+   #:sexp-head-to-kind
+   #:sexp-to-cst
+   #:byte-offset-to-line-col
+   #:diagnostic
+   #:diagnostic-error-code
+   #:diagnostic-fix-it
+   #:diagnostic-message
+   #:diagnostic-severity
+   #:diagnostic-span
+   #:did-you-mean
+   #:fix-it
+   #:fix-it-span
+   #:fix-it-text
+   #:format-diagnostic
+   #:format-diagnostic-list
+   #:make-diagnostic
+   #:make-fix-it
+   #:make-parse-error
+   #:make-parse-warning
    #:parse-failure
-   #:byte-offset-to-line-col #:source-line-at
-   #:format-diagnostic #:format-diagnostic-list
-   ;; Incremental parsing
-   #:edit-operation #:make-edit-operation
+   #:source-line-at
+   #:undefined-symbol-diagnostic
+   #:warning-as-error-p
+   #:*werror-categories*
+   #:*werror-p*
+   #:lex-all
+   #:lexer-read-token
+   #:lexer-token
+   #:lexer-token-column
+   #:lexer-token-end-byte
+   #:lexer-token-line
+   #:lexer-token-start-byte
+   #:lexer-token-trivia
+   #:make-lexer
+   #:cache-lookup
+   #:cache-store
+   #:edit-operation
+   #:invalidate-parse-cache
+   #:make-edit-operation
    #:parse-incremental
-   #:cache-lookup #:cache-store #:invalidate-parse-cache
-   ;; CST lowering
-   #:lower-cst-to-ast #:lower-cst-list-to-ast
-   #:parse-and-lower #:parse-and-lower-one
-   #:parse-source #:parse-all-forms
-   ;; Lambda-list / slot-spec parsing
-   #:parse-compiler-lambda-list #:lambda-list-has-extended-p
-   #:parse-slot-spec
-   ;; Roundtrip
+   #:*grammar-rules*
+   #:clear-grammar-rules
+   #:def-grammar-rule
+   #:parse-all-forms
+   #:parse-cl-source
+   #:parse-cl-source-single
+   #:parse-combinator
+   #:parse-ok-p
+   #:parse-source
+   #:parse-source-for-language
+   #:parse-with-grammar
+   #:query-grammar
+   #:lambda-list-has-extended-p
+   #:lower-cst-list-to-ast
+   #:lower-cst-to-ast
    #:lower-sexp-to-ast
-   ;; Grammar combinator engine
-   #:*grammar-rules* #:def-grammar-rule #:query-grammar #:clear-grammar-rules
-   #:parse-combinator #:parse-ok-p #:parse-with-grammar
-   ;; Multi-language dispatch
-   #:parse-source-for-language))
+   #:parse-and-lower
+   #:parse-and-lower-one
+   #:parse-compiler-lambda-list
+   #:parse-slot-spec))
