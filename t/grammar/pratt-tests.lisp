@@ -1,0 +1,309 @@
+;;;; tests/unit/parse/pratt-tests.lisp — Pratt parser engine unit tests
+;;;;
+;;;; Tests: pratt-context stream ops, NUD dispatch, CL grammar round-trips,
+;;;; parse-cl-source CST structure, parse-all-forms s-expression output,
+;;;; error recovery via cst-error, and parse-and-lower pipeline.
+
+(in-package :cl-cc/parse/grammar/test)
+
+
+;;; ─── Helpers ─────────────────────────────────────────────────────────────────
+
+(defun make-test-ctx (source)
+  "Create a generic pratt-context from SOURCE string for parser-engine tests."
+  (let ((tokens (cl-cc/parse/reader:lex-all source)))
+    (cl-cc/parse/grammar::make-pratt-context
+     :tokens tokens
+     :source source
+     :source-file nil
+     :tok-type-fn #'cl-cc/bootstrap:lexer-token-type
+     :tok-value-fn #'cl-cc/bootstrap:lexer-token-value
+     :tok-start-fn #'cl-cc/parse/reader:lexer-token-start-byte
+     :tok-end-fn #'cl-cc/parse/reader:lexer-token-end-byte
+     :nud-table (make-hash-table :test #'eq)
+     :led-table (make-hash-table :test #'eq))))
+
+(defun parse-one-cst (source)
+  "Parse SOURCE and return the first CST node."
+  (first (nth-value 0 (cl-cc/parse/grammar:parse-cl-source source))))
+
+(defun parse-one-sexp (source)
+  "Parse SOURCE and return the first s-expression."
+  (first (cl-cc/parse/grammar:parse-all-forms source)))
+
+;;; ─── Stream Operations ───────────────────────────────────────────────────────
+
+(it-sequential "pratt-peek-behavior"
+  (let ((ctx (make-test-ctx "42")))
+    (let ((tok (cl-cc/parse/grammar::pratt-peek ctx)))
+      (expect (not (null tok)) :to-be-truthy)
+      (expect (cl-cc/bootstrap:lexer-token-type tok) :to-be :T-INT)))
+  (let ((ctx (make-test-ctx "42")))
+    (let ((tok1 (cl-cc/parse/grammar::pratt-peek ctx))
+          (tok2 (cl-cc/parse/grammar::pratt-peek ctx)))
+      (expect tok2 :to-be tok1))))
+
+(it-sequential "pratt-advance-consumes-token"
+  (let ((ctx (make-test-ctx "1 2")))
+    (let ((tok1 (cl-cc/parse/grammar::pratt-advance ctx)))
+      (expect (cl-cc/bootstrap:lexer-token-type tok1) :to-be :T-INT)
+      (expect (= 1 (cl-cc/bootstrap:lexer-token-value tok1)) :to-be-truthy))
+    (let ((tok2 (cl-cc/parse/grammar::pratt-advance ctx)))
+      (expect (cl-cc/bootstrap:lexer-token-type tok2) :to-be :T-INT)
+      (expect (= 2 (cl-cc/bootstrap:lexer-token-value tok2)) :to-be-truthy))))
+
+(it-sequential "pratt-at-end-p-states empty-source"
+  (destructuring-bind (source expected advance-first) (list "" t nil)
+    (let ((ctx (make-test-ctx source)))
+    (when advance-first
+      (cl-cc/parse/grammar::pratt-advance ctx))
+    (if expected
+        (expect (cl-cc/parse/grammar::pratt-at-end-p ctx) :to-be-truthy)
+        (expect (cl-cc/parse/grammar::pratt-at-end-p ctx) :to-be-falsy)))))
+
+(it-sequential "pratt-at-end-p-states non-empty"
+  (destructuring-bind (source expected advance-first) (list "42" nil nil)
+    (let ((ctx (make-test-ctx source)))
+    (when advance-first
+      (cl-cc/parse/grammar::pratt-advance ctx))
+    (if expected
+        (expect (cl-cc/parse/grammar::pratt-at-end-p ctx) :to-be-truthy)
+        (expect (cl-cc/parse/grammar::pratt-at-end-p ctx) :to-be-falsy)))))
+
+(it-sequential "pratt-at-end-p-states after-advance"
+  (destructuring-bind (source expected advance-first) (list "x" t t)
+    (let ((ctx (make-test-ctx source)))
+    (when advance-first
+      (cl-cc/parse/grammar::pratt-advance ctx))
+    (if expected
+        (expect (cl-cc/parse/grammar::pratt-at-end-p ctx) :to-be-truthy)
+        (expect (cl-cc/parse/grammar::pratt-at-end-p ctx) :to-be-falsy)))))
+
+;;; ─── Token Accessors ─────────────────────────────────────────────────────────
+
+(it-sequential "pratt-tok-type-via-context"
+  (let* ((ctx (make-test-ctx "hello"))
+         (tok (cl-cc/parse/grammar::pratt-peek ctx)))
+    (expect (cl-cc/parse/grammar::pratt-tok-type ctx tok) :to-be :T-IDENT)))
+
+(it-sequential "pratt-tok-value-via-context"
+  (let* ((ctx (make-test-ctx "hello"))
+         (tok (cl-cc/parse/grammar::pratt-peek ctx)))
+    (expect (string (cl-cc/parse/grammar::pratt-tok-value ctx tok)) :to-equal "HELLO")))
+
+(it-sequential "pratt-tok-type-nil-safe"
+  (let ((ctx (make-test-ctx "")))
+    (expect (cl-cc/parse/grammar::pratt-tok-type ctx nil) :to-be nil)))
+
+;;; ─── Diagnostics: pratt-expect ───────────────────────────────────────────────
+
+(it-sequential "pratt-expect-matching-type"
+  (let ((ctx (make-test-ctx "42")))
+    (let ((tok (cl-cc/parse/grammar::pratt-expect ctx :T-INT "test")))
+      (expect (not (null tok)) :to-be-truthy)
+      (expect (cl-cc/bootstrap:lexer-token-type tok) :to-be :T-INT))))
+
+(it-sequential "pratt-expect-adds-diagnostic-on-failure type-mismatch"
+  (destructuring-bind (source expected-type label) (list "42" :T-STRING "test")
+    (let ((ctx (make-test-ctx source)))
+    (cl-cc/parse/grammar::pratt-expect ctx expected-type label)
+    (expect (not (null (cl-cc/parse/grammar::pratt-context-diagnostics ctx))) :to-be-truthy))))
+
+(it-sequential "pratt-expect-adds-diagnostic-on-failure eof"
+  (destructuring-bind (source expected-type label) (list "" :T-INT "eof-test")
+    (let ((ctx (make-test-ctx source)))
+    (cl-cc/parse/grammar::pratt-expect ctx expected-type label)
+    (expect (not (null (cl-cc/parse/grammar::pratt-context-diagnostics ctx))) :to-be-truthy))))
+
+(it-sequential "pratt-expect-mismatch-returns-nil"
+  (let ((ctx (make-test-ctx "42")))
+    (let ((result (cl-cc/parse/grammar::pratt-expect ctx :T-STRING)))
+      (expect result :to-be nil))))
+
+;;; ─── parse-cl-source: CST Structure ─────────────────────────────────────────
+
+(it-sequential "parse-literal-kind integer"
+  (destructuring-bind (source expected-kind expected-num expected-str) (list "42" :T-INT 42 nil)
+    (let ((node (parse-one-cst source)))
+    (expect (cl-cc/parse/cst:cst-token-p node) :to-be-truthy)
+    (expect (cl-cc/parse/cst:cst-node-kind node) :to-be expected-kind)
+    (when expected-num
+      (expect (= expected-num (cl-cc/parse/cst:cst-token-value node)) :to-be-truthy))
+    (when expected-str
+      (expect (cl-cc/parse/cst:cst-token-value node) :to-equal expected-str)))))
+
+(it-sequential "parse-literal-kind float"
+  (destructuring-bind (source expected-kind expected-num expected-str) (list "3.14" :T-FLOAT nil nil)
+    (let ((node (parse-one-cst source)))
+    (expect (cl-cc/parse/cst:cst-token-p node) :to-be-truthy)
+    (expect (cl-cc/parse/cst:cst-node-kind node) :to-be expected-kind)
+    (when expected-num
+      (expect (= expected-num (cl-cc/parse/cst:cst-token-value node)) :to-be-truthy))
+    (when expected-str
+      (expect (cl-cc/parse/cst:cst-token-value node) :to-equal expected-str)))))
+
+(it-sequential "parse-literal-kind symbol"
+  (destructuring-bind (source expected-kind expected-num expected-str) (list "foo" :T-IDENT nil nil)
+    (let ((node (parse-one-cst source)))
+    (expect (cl-cc/parse/cst:cst-token-p node) :to-be-truthy)
+    (expect (cl-cc/parse/cst:cst-node-kind node) :to-be expected-kind)
+    (when expected-num
+      (expect (= expected-num (cl-cc/parse/cst:cst-token-value node)) :to-be-truthy))
+    (when expected-str
+      (expect (cl-cc/parse/cst:cst-token-value node) :to-equal expected-str)))))
+
+(it-sequential "parse-literal-kind keyword"
+  (destructuring-bind (source expected-kind expected-num expected-str) (list ":foo" :T-KEYWORD nil nil)
+    (let ((node (parse-one-cst source)))
+    (expect (cl-cc/parse/cst:cst-token-p node) :to-be-truthy)
+    (expect (cl-cc/parse/cst:cst-node-kind node) :to-be expected-kind)
+    (when expected-num
+      (expect (= expected-num (cl-cc/parse/cst:cst-token-value node)) :to-be-truthy))
+    (when expected-str
+      (expect (cl-cc/parse/cst:cst-token-value node) :to-equal expected-str)))))
+
+(it-sequential "parse-literal-kind string"
+  (destructuring-bind (source expected-kind expected-num expected-str) (list "\"hello\"" :T-STRING nil "hello")
+    (let ((node (parse-one-cst source)))
+    (expect (cl-cc/parse/cst:cst-token-p node) :to-be-truthy)
+    (expect (cl-cc/parse/cst:cst-node-kind node) :to-be expected-kind)
+    (when expected-num
+      (expect (= expected-num (cl-cc/parse/cst:cst-token-value node)) :to-be-truthy))
+    (when expected-str
+      (expect (cl-cc/parse/cst:cst-token-value node) :to-equal expected-str)))))
+
+(it-sequential "parse-empty-list-produces-interior"
+  (let ((node (parse-one-cst "()")))
+    (expect (cl-cc/parse/cst:cst-interior-p node) :to-be-truthy)
+    (expect (cl-cc/parse/cst:cst-node-kind node) :to-be :list)
+    (expect (= 0 (length (cl-cc/parse/cst:cst-children node))) :to-be-truthy)))
+
+(it-sequential "parse-simple-list-produces-children"
+  (let ((node (parse-one-cst "(a b c)")))
+    (expect (cl-cc/parse/cst:cst-interior-p node) :to-be-truthy)
+    (expect (= 3 (length (cl-cc/parse/cst:cst-children node))) :to-be-truthy)))
+
+(it-sequential "parse-nested-list"
+  (let ((node (parse-one-cst "(a (b c))")))
+    (expect (cl-cc/parse/cst:cst-interior-p node) :to-be-truthy)
+    (expect (= 2 (length (cl-cc/parse/cst:cst-children node))) :to-be-truthy)
+    (let ((inner (second (cl-cc/parse/cst:cst-children node))))
+      (expect (cl-cc/parse/cst:cst-interior-p inner) :to-be-truthy)
+      (expect (= 2 (length (cl-cc/parse/cst:cst-children inner))) :to-be-truthy))))
+
+(it-sequential "parse-dispatch-interior-kind quote"
+  (destructuring-bind (source expected-kind) (list "'x" :quote)
+    (let ((node (parse-one-cst source)))
+    (expect (cl-cc/parse/cst:cst-interior-p node) :to-be-truthy)
+    (expect (cl-cc/parse/cst:cst-node-kind node) :to-be expected-kind))))
+
+(it-sequential "parse-dispatch-interior-kind quasiquote"
+  (destructuring-bind (source expected-kind) (list "`x" :quasiquote)
+    (let ((node (parse-one-cst source)))
+    (expect (cl-cc/parse/cst:cst-interior-p node) :to-be-truthy)
+    (expect (cl-cc/parse/cst:cst-node-kind node) :to-be expected-kind))))
+
+(it-sequential "parse-dispatch-interior-kind function"
+  (destructuring-bind (source expected-kind) (list "#'foo" :function)
+    (let ((node (parse-one-cst source)))
+    (expect (cl-cc/parse/cst:cst-interior-p node) :to-be-truthy)
+    (expect (cl-cc/parse/cst:cst-node-kind node) :to-be expected-kind))))
+
+(it-sequential "parse-dispatch-interior-kind vector"
+  (destructuring-bind (source expected-kind) (list "#(1 2 3)" :vector)
+    (let ((node (parse-one-cst source)))
+    (expect (cl-cc/parse/cst:cst-interior-p node) :to-be-truthy)
+    (expect (cl-cc/parse/cst:cst-node-kind node) :to-be expected-kind))))
+
+(in-package :cl-cc/parse/grammar/test)
+
+(it-sequential "pratt-parse-list-until-consumes-terminator"
+  (let ((ctx (make-test-ctx "(1) 42")))
+    (cl-cc/parse/grammar::pratt-advance ctx) ; consume LPAREN
+    (cl-cc/parse/grammar::pratt-parse-list-until ctx :T-RPAREN
+      (lambda (c) (cl-cc/parse/grammar::pratt-parse-expr c)))
+    ;; Next token should be 42, not RPAREN
+    (let ((tok (cl-cc/parse/grammar::pratt-peek ctx)))
+      (expect (cl-cc/bootstrap:lexer-token-type tok) :to-be :T-INT)
+      (expect (cl-cc/bootstrap:lexer-token-value tok) :to-equal 42))))
+
+(it-sequential "pratt-parse-list-until-length elements"
+  (destructuring-bind (source expected-len) (list "(1 2 3)" 3)
+    (let ((ctx (make-test-ctx source)))
+    (cl-cc/parse/grammar::pratt-advance ctx) ; consume LPAREN
+    (let ((items (cl-cc/parse/grammar::pratt-parse-list-until ctx :T-RPAREN
+                   (lambda (c) (cl-cc/parse/grammar::pratt-parse-expr c)))))
+      (expect (length items) :to-equal expected-len)))))
+
+(it-sequential "pratt-parse-list-until-length empty"
+  (destructuring-bind (source expected-len) (list "()" 0)
+    (let ((ctx (make-test-ctx source)))
+    (cl-cc/parse/grammar::pratt-advance ctx) ; consume LPAREN
+    (let ((items (cl-cc/parse/grammar::pratt-parse-list-until ctx :T-RPAREN
+                   (lambda (c) (cl-cc/parse/grammar::pratt-parse-expr c)))))
+      (expect (length items) :to-equal expected-len)))))
+
+(it-sequential "pratt-add-diagnostic-records-message"
+  (let ((ctx (make-test-ctx "42")))
+    (cl-cc/parse/grammar::pratt-add-diagnostic ctx "unexpected token" (cons 0 2))
+    (let ((diag (first (cl-cc/parse/grammar::pratt-context-diagnostics ctx))))
+      (expect (not (null diag)) :to-be-truthy))))
+
+(it-sequential "pratt-add-diagnostic-count two"
+  (destructuring-bind (n) (list 2)
+    (let ((ctx (make-test-ctx "42")))
+    (dotimes (i n)
+      (cl-cc/parse/grammar::pratt-add-diagnostic ctx (format nil "error ~a" i) (cons i (1+ i))))
+    (expect (length (cl-cc/parse/grammar::pratt-context-diagnostics ctx)) :to-equal n))))
+
+(it-sequential "pratt-add-diagnostic-count one"
+  (destructuring-bind (n) (list 1)
+    (let ((ctx (make-test-ctx "42")))
+    (dotimes (i n)
+      (cl-cc/parse/grammar::pratt-add-diagnostic ctx (format nil "error ~a" i) (cons i (1+ i))))
+    (expect (length (cl-cc/parse/grammar::pratt-context-diagnostics ctx)) :to-equal n))))
+
+(it-sequential "pratt-parse-expr-node-type nested-list"
+  (destructuring-bind (source pred expected-kind) (list "(let ((x 1)) x)" #'cl-cc/parse/cst:cst-interior-p nil)
+    (let ((node (parse-one-cst source)))
+    (expect (funcall pred node) :to-be-truthy)
+    (when expected-kind
+      (expect (cl-cc/parse/cst:cst-node-kind node) :to-be expected-kind)))))
+
+(it-sequential "pratt-parse-expr-node-type quote"
+  (destructuring-bind (source pred expected-kind) (list "'x" #'cl-cc/parse/cst:cst-interior-p :quote)
+    (let ((node (parse-one-cst source)))
+    (expect (funcall pred node) :to-be-truthy)
+    (when expected-kind
+      (expect (cl-cc/parse/cst:cst-node-kind node) :to-be expected-kind)))))
+
+(it-sequential "pratt-parse-expr-node-type list"
+  (destructuring-bind (source pred expected-kind) (list "(+ 1 2)" #'cl-cc/parse/cst:cst-interior-p nil)
+    (let ((node (parse-one-cst source)))
+    (expect (funcall pred node) :to-be-truthy)
+    (when expected-kind
+      (expect (cl-cc/parse/cst:cst-node-kind node) :to-be expected-kind)))))
+
+(it-sequential "pratt-parse-expr-node-type symbol"
+  (destructuring-bind (source pred expected-kind) (list "foo" #'cl-cc/parse/cst:cst-token-p nil)
+    (let ((node (parse-one-cst source)))
+    (expect (funcall pred node) :to-be-truthy)
+    (when expected-kind
+      (expect (cl-cc/parse/cst:cst-node-kind node) :to-be expected-kind)))))
+
+(it-sequential "pratt-parse-expr-node-type integer"
+  (destructuring-bind (source pred expected-kind) (list "42" #'cl-cc/parse/cst:cst-token-p nil)
+    (let ((node (parse-one-cst source)))
+    (expect (funcall pred node) :to-be-truthy)
+    (when expected-kind
+      (expect (cl-cc/parse/cst:cst-node-kind node) :to-be expected-kind)))))
+
+(it-sequential "pratt-parse-expr-eof-returns-error"
+  (let* ((ctx  (make-test-ctx ""))
+         (node (cl-cc/parse/grammar::pratt-parse-expr ctx)))
+    (expect (cl-cc/parse:cst-error-p node) :to-be-truthy)))
+
+(it-sequential "pratt-parse-expr-empty-nud-table-returns-error"
+  (let* ((ctx  (make-test-ctx "42"))
+         (node (cl-cc/parse/grammar::pratt-parse-expr ctx)))
+    (expect (cl-cc/parse:cst-error-p node) :to-be-truthy)))

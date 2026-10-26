@@ -1,3 +1,3 @@
-(in-package :cl-cc-parse/test/lowering)
+(in-package :cl-cc/parse/lowering/test)
 
 (describe-concurrent "lowering feature")

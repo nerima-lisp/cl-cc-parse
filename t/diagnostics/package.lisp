@@ -1,3 +1,3 @@
-(defpackage :cl-cc-parse/test/diagnostics
+(defpackage :cl-cc/parse/diagnostics/test
   (:use :cl)
-  (:import-from :cl-weave :describe-concurrent))
+  (:import-from :cl-weave :describe-concurrent :it-sequential :expect))

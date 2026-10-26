@@ -76,25 +76,48 @@
   ((:file "package")
    (:module "cst"
     :serial t
-    :components ((:file "package") (:file "suite")))
+    :components ((:file "package") (:file "suite") (:file "cst-tests")))
    (:module "diagnostics"
     :serial t
-    :components ((:file "package") (:file "suite")))
+    :components ((:file "package") (:file "suite") (:file "diagnostics-tests")))
    (:module "reader"
     :serial t
     :components
     ((:file "package")
      (:file "suite")
+     (:file "lexer-dispatch-tests")
+     (:file "lexer-tests")
      (:file "parse-boundary-test")))
    (:module "incremental"
     :serial t
-    :components ((:file "package") (:file "suite")))
+    :components ((:file "package") (:file "suite") (:file "incremental-tests")))
    (:module "grammar"
     :serial t
-    :components ((:file "package") (:file "suite") (:file "kit-adapter-tests")))
+    :components ((:file "package")
+                 (:file "suite")
+                 (:file "kit-adapter-tests")
+                 (:file "combinator-tests")
+                 (:file "combinator-tests-2")
+                 (:file "grammar-parser-tests")
+                 (:file "grammar-special-form-tests")
+                 (:file "grammar-tests")
+                 (:file "grammar-tokenstream-tests")
+                 (:file "parser-combinator-tests")
+                 (:file "pratt-tests")))
    (:module "lowering"
     :serial t
-    :components ((:file "package") (:file "suite"))))
+    :components ((:file "package")
+     (:file "suite")
+     (:file "cl-parser-ast-tests")
+     (:file "cl-parser-error-tests")
+     (:file "cl-parser-new-extended-tests")
+     (:file "cl-parser-new-tests")
+     (:file "cl-parser-tests")
+     (:file "cst-to-ast-tests")
+     (:file "lower-arithmetic-tests")
+     (:file "lower-tests")
+     (:file "parser-roundtrip-tests")
+     (:file "pratt-pipeline-tests"))))
   :perform (asdf:test-op (operation system)
              (declare (ignore operation system))
              (unless (uiop:symbol-call :cl-weave :run-all

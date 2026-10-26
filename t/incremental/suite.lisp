@@ -1,3 +1,3 @@
-(in-package :cl-cc-parse/test/incremental)
+(in-package :cl-cc/parse/incremental/test)
 
 (describe-concurrent "incremental feature")

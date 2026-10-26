@@ -1,3 +1,3 @@
-(in-package :cl-cc-parse/test/diagnostics)
+(in-package :cl-cc/parse/diagnostics/test)
 
 (describe-concurrent "diagnostics feature")
