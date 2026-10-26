@@ -24,36 +24,53 @@
       (expect (find-package name) :to-be nil))))
 
 (describe-sequential "cl-cc-parse public surface"
-  (it "exports the entry points a consumer lowers source through"
+  (it "keeps the facade surface and records feature-only additions"
     (let* ((expected
              (with-open-file (stream
                               (asdf:system-relative-pathname
                                "cl-cc-parse"
                                "t/export-surface.txt"))
                (read stream)))
+           (keep-records
+             (remove-if-not (lambda (record) (eq (second record) :keep))
+                            expected))
+           (add-records
+             (remove-if-not (lambda (record) (eq (second record) :add))
+                            expected))
            (expected-names
-             (sort (mapcar #'sixth expected) #'string<))
+             (sort (mapcar #'sixth keep-records) #'string<))
            (actual-names
              (sort (loop for symbol being the external-symbols of
                          (find-package :cl-cc/parse)
                          collect (symbol-name symbol))
                    #'string<)))
-      (expect (length expected) :to-be 86)
+      (expect (length expected) :to-be 88)
+      (expect (length keep-records) :to-be 86)
+      (expect (length add-records) :to-be 2)
       (expect (equal actual-names expected-names) :to-be-truthy)
       (dolist (record expected)
-        (destructuring-bind (kind action facade feature home name) record
-          (declare (ignore kind action))
+        (destructuring-bind (kind action facade feature home name
+                             &optional changelog-ref)
+            record
+          (expect kind :to-be :symbol)
           (multiple-value-bind (facade-symbol facade-status)
               (find-symbol name (string-upcase facade))
-            (expect facade-status :to-be :external)
             (multiple-value-bind (feature-symbol feature-status)
                 (find-symbol name (string-upcase feature))
               (expect feature-status :to-be :external)
-              (expect (eq facade-symbol feature-symbol) :to-be-truthy)
               (expect (string-equal
-                       (package-name (symbol-package facade-symbol))
+                       (package-name (symbol-package feature-symbol))
                        home)
-                     :to-be-truthy)))))
+                     :to-be-truthy)
+              (ecase action
+                (:keep
+                 (expect facade-status :to-be :external)
+                 (expect (eq facade-symbol feature-symbol) :to-be-truthy))
+                (:add
+                 (expect facade-status :to-be nil)
+                 (expect (and (stringp changelog-ref)
+                              (search "CHANGELOG.md#" changelog-ref))
+                         :to-be-truthy)))))))
       (dolist (entry '(("LEXER-TOKEN-P" "CL-CC/PARSE/READER")
                        ("LEXER-TOKEN-TYPE" "CL-CC/PARSE/READER")
                        ("LEXER-TOKEN-VALUE" "CL-CC/PARSE/READER")
