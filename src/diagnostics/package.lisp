@@ -10,4 +10,5 @@
    #:byte-offset-to-line-col #:source-line-at
    #:format-diagnostic #:format-diagnostic-list
    #:*werror-p* #:*werror-categories* #:warning-as-error-p
-   #:did-you-mean #:undefined-symbol-diagnostic))
+   #:did-you-mean #:undefined-symbol-diagnostic
+   #:diagnostic-notes #:maybe-promote-warning-diagnostic))

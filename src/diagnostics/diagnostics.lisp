@@ -85,7 +85,7 @@
 (defun format-diagnostic-list (diags source &optional (stream *standard-output*))
   "Format a list of diagnostics with summary.
 When *WERROR-P* or *WERROR-CATEGORIES* matches, warnings are promoted to errors before output."
-  (let ((diags (mapcar #'%maybe-promote-warning-diagnostic diags)))
+  (let ((diags (mapcar #'maybe-promote-warning-diagnostic diags)))
     (dolist (d diags)
       (format-diagnostic d source stream)
       (terpri stream))
@@ -121,7 +121,7 @@ When *WERROR-P* or *WERROR-CATEGORIES* matches, warnings are promoted to errors 
                           *werror-categories*
                           :test #'string=))))))
 
-(defun %maybe-promote-warning-diagnostic (diag)
+(defun maybe-promote-warning-diagnostic (diag)
   (if (warning-as-error-p diag)
       (make-diagnostic :severity :error
                        :span (diagnostic-span diag)
