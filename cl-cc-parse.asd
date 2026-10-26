@@ -91,7 +91,7 @@
     :components ((:file "package") (:file "suite")))
    (:module "grammar"
     :serial t
-    :components ((:file "package") (:file "suite")))
+    :components ((:file "package") (:file "suite") (:file "kit-adapter-tests")))
    (:module "lowering"
     :serial t
     :components ((:file "package") (:file "suite"))))
