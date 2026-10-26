@@ -1,4 +1,4 @@
-(in-package :cl-cc-parse/test/grammar)
+(in-package :cl-cc/parse/grammar/test)
 
 (defun make-pratt-adapter-context (tokens)
   (let* ((nud-table (make-hash-table :test #'eq))

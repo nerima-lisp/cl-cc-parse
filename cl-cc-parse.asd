@@ -94,15 +94,16 @@
    (:module "grammar"
     :serial t
     :components ((:file "package")
-     (:file "suite")
-     (:file "combinator-tests")
-     (:file "combinator-tests-2")
-     (:file "grammar-parser-tests")
-     (:file "grammar-special-form-tests")
-     (:file "grammar-tests")
-     (:file "grammar-tokenstream-tests")
-     (:file "parser-combinator-tests")
-     (:file "pratt-tests")))
+                 (:file "suite")
+                 (:file "kit-adapter-tests")
+                 (:file "combinator-tests")
+                 (:file "combinator-tests-2")
+                 (:file "grammar-parser-tests")
+                 (:file "grammar-special-form-tests")
+                 (:file "grammar-tests")
+                 (:file "grammar-tokenstream-tests")
+                 (:file "parser-combinator-tests")
+                 (:file "pratt-tests")))
    (:module "lowering"
     :serial t
     :components ((:file "package")
