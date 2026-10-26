@@ -13,7 +13,7 @@
       flake = false;
     };
     cl-parser-kit = {
-      url = "github:nerima-lisp/cl-parser-kit/aad0f88727940ff3f4e8674943e3faa240206f45";
+      url = "github:nerima-lisp/cl-parser-kit/6379014e6d85bdaecc57157611baa4ddf4b2b206";
       flake = false;
     };
     cl-weave = {
